@@ -1,0 +1,8 @@
+*/__pycache__/*
+build/*
+.env/*
+*.egg-info/*
+tests/*
+
+test.py
+*.zip
