@@ -25,7 +25,8 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
                 host='your.irc.domaine.org',
                 port=8600,
                 username='apiname',
-                password='apiPASSWORD'
+                password='apiPASSWORD',
+                debug_level=10
             )
 
         # Enjoy the power of JSON-RPC
