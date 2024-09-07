@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -24,8 +25,12 @@ class Name_ban:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -40,7 +45,9 @@ class Name_ban:
         """
         try:
             response = self.Connection.query(method='name_ban.list')
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -73,9 +80,9 @@ class Name_ban:
             return self.DB_NAME_BANS
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def get(self, name: str) -> Union[ModelNameBan, None, bool]:
         """Retrieve all details of a single name ban (qline).
@@ -88,7 +95,9 @@ class Name_ban:
         """
         try:
             response = self.Connection.query(method='name_ban.get', param={"name": name})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -118,9 +127,9 @@ class Name_ban:
             return objectNameBan
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def add(self, name: str, reason: str, _set_by: str = None, _expire_at: str = None, _duration_string: str = None) -> bool:
         """Add a name ban (qline).
@@ -139,26 +148,33 @@ class Name_ban:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='name_ban.add', 
-            param={"name": name, "reason": reason, "set_by": _set_by, "expire_at": _expire_at, "duration_string": _duration_string}
-            )
+        try:
+            response = self.Connection.query(
+                method='name_ban.add', 
+                param={"name": name, "reason": reason, "set_by": _set_by, "expire_at": _expire_at, "duration_string": _duration_string}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def del_(self, name: str, _set_by: str = None) -> bool:
         """Delete a name ban (*LINE).
@@ -170,23 +186,30 @@ class Name_ban:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='name_ban.del',
-            param={"name": name, 'set_by': _set_by}
-            )
+        try:
+            response = self.Connection.query(
+                method='name_ban.del',
+                param={"name": name, 'set_by': _set_by}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')

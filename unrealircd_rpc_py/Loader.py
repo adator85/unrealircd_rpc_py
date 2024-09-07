@@ -29,33 +29,44 @@ class Loader:
 
         # Create ErrorModel Instance
         self.Error = self.Connection.Error
+        """Access Error Object when there is an error"""
 
         # Create User Instance
         self.User = User(self.Connection)
+        """The User module instance"""
 
         # Create Server Instance
         self.Server = Server(self.Connection)
+        """The Server module instance"""
 
         # Create Server_ban Instance
         self.Server_ban = Server_ban(self.Connection)
+        """The Server_ban module instance"""
 
         # Create Server_ban_exception Instance
         self.Server_ban_exception = Server_ban_exception(self.Connection)
+        """The Server_ban_exception module instance"""
 
         # Create Name_ban Instance
         self.Name_ban = Name_ban(self.Connection)
+        """The Name_ban module instance"""
 
         # Create Rpc Instance
         self.Rpc = Rpc(self.Connection)
+        """The Rpc module instance"""
 
         # Create Spamfilter Instance
         self.Spamfilter = Spamfilter(self.Connection)
+        """The Spamfilter module instance"""
 
         # Create Channel Instance
         self.Channel = Channel(self.Connection)
+        """The Channel module instance"""
 
         # Create Stats Instance
         self.Stats = Stats(self.Connection)
+        """The Stats module instance"""
 
         # Create Whowas Instance
         self.Whowas = Whowas(self.Connection)
+        """The Whowas module instance"""

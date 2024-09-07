@@ -114,8 +114,16 @@ class Connection:
             self.Logs.error(f"General Error {err}")
             self.Logs.error(f"Initial request: {self.request}")
 
-    def __build_headers(self, credentials, data:str) -> str:
+    def __build_headers(self, credentials: str, data:str) -> str:
+        """Build the header for socket connection only
 
+        Args:
+            credentials (_type_): cypted credentials
+            data (str): data we need to send to the server
+
+        Returns:
+            str: Returd the built header
+        """
         headers: str = (
                     f"POST /{self.endpoint} HTTP/1.1\r\n"
                     f"Host: {self.host}\r\n"

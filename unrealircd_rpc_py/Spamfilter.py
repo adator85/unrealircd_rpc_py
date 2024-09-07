@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -28,11 +29,14 @@ class Spamfilter:
 
     DB_SPAMFILTERS: list[ModelSpamfilter] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -47,7 +51,9 @@ class Spamfilter:
         """
         try:
             response = self.Connection.query(method='spamfilter.list')
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -87,9 +93,9 @@ class Spamfilter:
             return self.DB_SPAMFILTERS
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[ModelSpamfilter, None, bool]:
         """Retrieve all details of a single spamfilter.
@@ -109,7 +115,9 @@ class Spamfilter:
         """
         try:
             response = self.Connection.query(method='spamfilter.get', param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -146,9 +154,9 @@ class Spamfilter:
             return objectSpamfilter
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def add(self, name: str, match_type: str, ban_action: str, ban_duration: int, spamfilter_targets: str, reason: str, _set_by: str = None) -> bool:
         """Add a spamfilter.
@@ -171,26 +179,33 @@ class Spamfilter:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='spamfilter.add', 
-            param={"name": name, "match_type": match_type, "ban_action": ban_action, "ban_duration": ban_duration, "spamfilter_targets": spamfilter_targets, 'reason': reason, 'set_by': _set_by}
-            )
+        try:
+            response = self.Connection.query(
+                method='spamfilter.add', 
+                param={"name": name, "match_type": match_type, "ban_action": ban_action, "ban_duration": ban_duration, "spamfilter_targets": spamfilter_targets, 'reason': reason, 'set_by': _set_by}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def del_(self,  name: str, match_type: str, ban_action: str, spamfilter_targets: str, _set_by: str = None) -> bool:
         """Delete a spamfilter.
@@ -209,23 +224,30 @@ class Spamfilter:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='spamfilter.del',
-            param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets, 'set_by': _set_by}
-            )
+        try:
+            response = self.Connection.query(
+                method='spamfilter.del',
+                param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets, 'set_by': _set_by}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')

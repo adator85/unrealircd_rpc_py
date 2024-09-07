@@ -3,6 +3,7 @@ build/*
 .env/*
 *.egg-info/*
 tests/*
+docs/*
 
 test.py
 *.zip
