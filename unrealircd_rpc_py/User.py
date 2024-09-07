@@ -52,6 +52,9 @@ class User:
             response = self.Connection.query('user.list', param={'object_detail_level': 4})
             self.original_response = response
 
+            if response is None:
+                return False
+
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
@@ -110,6 +113,9 @@ class User:
 
             response = self.Connection.query('user.get', {'nick': nickoruid})
             self.original_response = response
+
+            if response is None:
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
@@ -170,6 +176,9 @@ class User:
         response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': _force})
         self.original_response = response
 
+        if response is None:
+            return False
+
         if 'error' in response:
             self.Connection.set_error(response)
             return False
@@ -189,6 +198,9 @@ class User:
 
         response = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
@@ -210,6 +222,9 @@ class User:
         response = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
         self.original_response = response
 
+        if response is None:
+            return False
+
         if 'error' in response:
             self.Connection.set_error(response)
             return False
@@ -229,6 +244,9 @@ class User:
 
         response = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
@@ -250,6 +268,9 @@ class User:
         response = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
         self.original_response = response
 
+        if response is None:
+            return False
+
         if 'error' in response:
             self.Connection.set_error(response)
             return False
@@ -269,6 +290,9 @@ class User:
 
         response = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
@@ -294,6 +318,9 @@ class User:
 
         response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': _class, 'modes': _modes, 'snomask': _snomask, 'vhost': _vhost})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
@@ -321,6 +348,9 @@ class User:
         response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': _key, 'force': _force})
         self.original_response = response
 
+        if response is None:
+            return False
+
         if 'error' in response:
             self.Connection.set_error(response)
             return False
@@ -345,6 +375,9 @@ class User:
         response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': _force})
         self.original_response = response
 
+        if response is None:
+            return False
+
         if 'error' in response:
             self.Connection.set_error(response)
             return False
@@ -367,6 +400,9 @@ class User:
 
         response = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
@@ -391,6 +427,9 @@ class User:
 
         response = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
         self.original_response = response
+
+        if response is None:
+            return False
 
         if 'error' in response:
             self.Connection.set_error(response)
