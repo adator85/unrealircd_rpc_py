@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -23,8 +24,12 @@ class Channel:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -34,6 +39,10 @@ class Channel:
     def list_(self, _object_detail_level: int = 1) -> Union[list[ModelChannel], None, bool]:
         """List channels.
 
+        if you want to have more details increase the level or see the level you want by visiting this page:
+
+        https://www.unrealircd.org/docs/JSON-RPC:Channel#Structure_of_a_channel
+
         Args:
             _object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a channel. In this RPC call it defaults to 1 if this parameter is not specified. Defaults to 1.
 
@@ -42,7 +51,9 @@ class Channel:
         """
         try:
             response = self.Connection.query(method='channel.list', param={'object_detail_level': _object_detail_level})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -74,9 +85,9 @@ class Channel:
             return self.DB_CHANNELS
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def get(self, channel: str, _object_detail_level: int = 3) -> Union[ModelChannel, None, bool]:
         """Retrieve all details of a single channel. 
@@ -91,7 +102,9 @@ class Channel:
         """
         try:
             response = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': _object_detail_level})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -120,9 +133,9 @@ class Channel:
             return objectChannel
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def set_mode(self, channel: str, modes: str, parameters: str) -> bool:
         """Set and unset modes on a channel.
@@ -135,22 +148,30 @@ class Channel:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(method='channel.set_mode', param={"channel": channel,"modes": modes,"parameters": parameters})
-        self.original_response = response
+        try:
+            response = self.Connection.query(method='channel.set_mode', param={"channel": channel,"modes": modes,"parameters": parameters})
 
-        if response is None:
-            return False
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if response is None:
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
+
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_topic(self, channel: str, topic: str, _set_by: str = None, _set_at: str = None) -> bool:
         """Set a topic on a channel.
@@ -164,22 +185,30 @@ class Channel:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(method='channel.set_topic', param={"channel": channel, "topic": topic, "set_by": _set_by, "set_at": _set_at})
-        self.original_response = response
+        try:
+            response = self.Connection.query(method='channel.set_topic', param={"channel": channel, "topic": topic, "set_by": _set_by, "set_at": _set_at})
 
-        if response is None:
-            return False
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if response is None:
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
+
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def kick(self, channel: str, nick: str, reason: str) -> bool:
         """Kick a user from a channel
@@ -192,20 +221,27 @@ class Channel:
         Returns:
             bool: True if success
         """
+        try:
+            response = self.Connection.query(method='channel.kick', param={"channel": channel, "nick": nick, "reason": reason})
 
-        response = self.Connection.query(method='channel.kick', param={"channel": channel, "nick": nick, "reason": reason})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
