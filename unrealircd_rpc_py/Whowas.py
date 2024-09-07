@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -26,8 +27,12 @@ class Whowas:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -47,7 +52,9 @@ class Whowas:
         """
         try:
             response = self.Connection.query('whowas.get', param={'nick': _nick, 'ip': _ip, 'object_detail_level': _object_detail_level})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -83,6 +90,6 @@ class Whowas:
             return self.DB_WHOWAS
 
         except KeyError as ke:
-            self.Logs.error(str(ke))
-
-
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')

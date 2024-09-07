@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -60,8 +61,12 @@ class Server:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -76,7 +81,9 @@ class Server:
         """
         try:
             response = self.Connection.query('server.list')
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
@@ -119,9 +126,9 @@ class Server:
             return self.DB_SERVER
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def get(self, _serverorsid: str = None) -> Union[ModelServer, None, bool]:
         """Retrieve all details of a single server.
@@ -135,7 +142,9 @@ class Server:
         try:
 
             response = self.Connection.query('server.get', {'server': _serverorsid})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
@@ -175,10 +184,10 @@ class Server:
             return serverObject
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
             return None
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
             return None
 
     def rehash(self, _serverorsid: str = None) -> Union[ModelRehash, None, bool]:
@@ -195,7 +204,9 @@ class Server:
         """
         try:
             response = self.Connection.query('server.rehash', {'server': _serverorsid})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -223,6 +234,8 @@ class Server:
 
         except TypeError as te:
             self.Logs.error(f'Type Error: {te}')
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
 
@@ -241,7 +254,9 @@ class Server:
         """
         try:
             response = self.Connection.query('server.connect', {'link': link})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -252,8 +267,10 @@ class Server:
 
             return True
 
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(f'General Error: {err}')
+            self.Logs.error(f'General error: {err}')
 
     def disconnect(self, link: str) -> bool:
         """Terminate a server link (disconnect).
@@ -268,7 +285,9 @@ class Server:
         """
         try:
             response = self.Connection.query('server.disconnect', {'link': link})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -279,8 +298,10 @@ class Server:
 
             return True
 
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(f'General Error: {err}')
+            self.Logs.error(f'General error: {err}')
 
     def module_list(self, _serverorsid: str = None) -> Union[list[ModelModules], None, bool]:
         """Get the module list (list of loaded modules) on a server.
@@ -297,7 +318,9 @@ class Server:
         """
         try:
             response = self.Connection.query('server.module_list', {'server': _serverorsid})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -323,5 +346,7 @@ class Server:
 
             return self.DB_MODULES
 
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(f'General Error: {err}')
+            self.Logs.error(f'General error: {err}')

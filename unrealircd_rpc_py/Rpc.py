@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -15,8 +16,12 @@ class Rpc:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -31,7 +36,9 @@ class Rpc:
         """
         try:
             response = self.Connection.query(method='rpc.info')
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -72,26 +79,33 @@ class Rpc:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='rpc.set_issuer', 
-            param={"name": name}
-            )
+        try:
+            response = self.Connection.query(
+                method='rpc.set_issuer', 
+                param={"name": name}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def add_timer(self, timer_id: str, every_msec: int, request: dict) -> bool:
         """Add a timer so a JSON-RPC request is executed at certain intervals.
@@ -110,26 +124,33 @@ class Rpc:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='rpc.add_timer',
-            param={"timer_id": timer_id, "every_msec": every_msec, "request": request}
-            )
+        try:
+            response = self.Connection.query(
+                method='rpc.add_timer',
+                param={"timer_id": timer_id, "every_msec": every_msec, "request": request}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def del_timer(self, timer_id: str) -> bool:
         """Remove a previously added timer. Note that you can only cancel timers that belong to your own connection.
@@ -142,23 +163,30 @@ class Rpc:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(
-            method='rpc.del_timer', 
-            param={"timer_id": timer_id}
-            )
+        try:
+            response = self.Connection.query(
+                method='rpc.del_timer', 
+                param={"timer_id": timer_id}
+                )
 
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')

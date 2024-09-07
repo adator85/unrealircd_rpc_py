@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -34,8 +35,12 @@ class User:
 
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -50,7 +55,9 @@ class User:
         """
         try:
             response = self.Connection.query('user.list', param={'object_detail_level': 4})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -94,7 +101,9 @@ class User:
             return self.DB_USER
 
         except KeyError as ke:
-            self.Logs.error(str(ke))
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def get(self, nickoruid: str) -> Union[ModelUser, None, bool]:
         """Get user information
@@ -112,7 +121,9 @@ class User:
         try:
 
             response = self.Connection.query('user.get', {'nick': nickoruid})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -153,10 +164,10 @@ class User:
             return userObject
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
             return None
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
             return None
 
     def set_nick(self, nickoruid: str, newnick: str, _force: bool = False) -> bool:
@@ -172,18 +183,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': _force})
 
-        response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': _force})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_username(self, nickoruid: str, username:str) -> bool:
         """Set the username / ident of a user.
@@ -195,18 +213,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
 
-        response = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_realname(self, nickoruid: str, realname:str) -> bool:
         """Set the realname / gecos of a user.
@@ -218,18 +243,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
 
-        response = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_vhost(self, nickoruid: str, vhost:str) -> bool:
         """Set a virtual host (vhost) on the user.
@@ -241,18 +273,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
 
-        response = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_mode(self, nickoruid: str, modes:str) -> bool:
         """Change the modes of a user.
@@ -264,18 +303,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
 
-        response = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_snomask(self, nickoruid: str, snomask:str) -> bool:
         """Change the snomask of a user.
@@ -287,18 +333,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
 
-        response = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def set_oper(self, nickoruid: str, oper_account:str, oper_class: str, _class: str = '', _modes: str = '', _snomask: str = '', _vhost: str = '') -> bool:
         """Make user an IRC operator.
@@ -315,18 +368,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': _class, 'modes': _modes, 'snomask': _snomask, 'vhost': _vhost})
 
-        response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': _class, 'modes': _modes, 'snomask': _snomask, 'vhost': _vhost})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def join(self, nickoruid: str, channel:str, _key: str = '', _force: bool = False) -> bool:
         """Join a user to a channel.
@@ -344,18 +404,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': _key, 'force': _force})
 
-        response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': _key, 'force': _force})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def part(self, nickoruid: str, channel:str, _force: bool = False) -> bool:
         """Part a user from a channel.
@@ -371,18 +438,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': _force})
 
-        response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': _force})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def kill(self, nickoruid: str, reason:str) -> bool:
         """Kill a user, showing that the user was forcefully removed.
@@ -397,18 +471,25 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
 
-        response = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def quit(self, nickoruid: str, reason:str) -> bool:
         """Quit a user, pretending it was a normal QUIT.
@@ -424,15 +505,22 @@ class User:
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
+        try:
+            response = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
 
-        response = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
-        self.original_response = response
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if response is None:
-            return False
+            if response is None:
+                return False
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
