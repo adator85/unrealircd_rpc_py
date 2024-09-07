@@ -13,7 +13,7 @@ class Connection:
         code: int
         message: str
 
-    def __init__(self, url: str, endpoint: str, host: str, port: int, username: str, password: str,  req_method: str, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, url: str, endpoint: str, host: str, port: int, username: str, password: str,  req_method: str, debug_level: int) -> None:
 
         self.url = url
         self.endpoint = endpoint

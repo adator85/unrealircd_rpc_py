@@ -13,7 +13,8 @@ from unrealircd_rpc_py.Rpc import Rpc
 
 class Loader:
 
-    def __init__(self, url: str, endpoint: Union[Literal['api'], str], host: str, port: int, username: str, password: str,  req_method: Literal['requests', 'socket'] = 'requests') -> None:
+    def __init__(self, url: str, endpoint: Union[Literal['api'], str], host: str, port: int, username: str, password: str,  req_method: Literal['requests', 'socket'] = 'requests', 
+                 debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
 
         # Init the connection
         self.Connection = Connection(
@@ -24,7 +25,7 @@ class Loader:
             username=username,
             password=password,
             req_method=req_method,
-            debug_level=10
+            debug_level=debug_level
         )
 
         # Create ErrorModel Instance
