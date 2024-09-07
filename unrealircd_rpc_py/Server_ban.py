@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
@@ -21,11 +22,14 @@ class Server_ban:
 
     DB_SERVERS_BANS: list[ModelServerBan] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
-        # Record the original response
-        self.original_response: str = ''
+        # Store the original response
+        self.response_raw: str
+        """Original response used to see available keys."""
+
+        self.response_np: SimpleNamespace
+        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = Connection
@@ -40,7 +44,9 @@ class Server_ban:
         """
         try:
             response = self.Connection.query(method='server_ban.list')
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -73,9 +79,9 @@ class Server_ban:
             return self.DB_SERVERS_BANS
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def get(self, type: str, name: str) -> Union[ModelServerBan, None, bool]:
         """Retrieve all details of a single server ban (*LINE).
@@ -89,7 +95,9 @@ class Server_ban:
         """
         try:
             response = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
-            self.original_response = response
+
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 return False
@@ -119,9 +127,9 @@ class Server_ban:
             return objectChannel
 
         except KeyError as ke:
-            self.Logs.error(ke)
+            self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
-            self.Logs.error(err)
+            self.Logs.error(f'General error: {err}')
 
     def add(self, type: str, name: str, reason: str, expire_at: str, duration_sting: str, _set_by: str = None) -> bool:
         """Add a server ban (*LINE).
@@ -141,22 +149,30 @@ class Server_ban:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(method='server_ban.add', param={"type": type, "name": name, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': _set_by})
-        self.original_response = response
+        try:
+            response = self.Connection.query(method='server_ban.add', param={"type": type, "name": name, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': _set_by})
 
-        if response is None:
-            return False
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if response is None:
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
+
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def del_(self, type: str, name: str, _set_by: str = None) -> bool:
         """Delete a server ban (*LINE).
@@ -173,19 +189,27 @@ class Server_ban:
         Returns:
             bool: True if success
         """
-        response = self.Connection.query(method='server_ban.del', param={"type": type, "name": name, 'set_by': _set_by})
-        self.original_response = response
+        try:
+            response = self.Connection.query(method='server_ban.del', param={"type": type, "name": name, 'set_by': _set_by})
 
-        if response is None:
-            return False
+            self.response_raw = response
+            self.response_np = self.Connection.json_response_np
 
-        if 'error' in response:
-            self.Connection.set_error(response)
-            return False
+            if response is None:
+                return False
 
-        if 'result' in response:
-            if response['result']:
-                self.Logs.debug(response)
-                return True
+            if 'error' in response:
+                self.Connection.set_error(response)
+                return False
 
-        return True
+            if 'result' in response:
+                if response['result']:
+                    self.Logs.debug(response)
+                    return True
+
+            return True
+
+        except KeyError as ke:
+            self.Logs.error(f'KeyError: {ke}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')

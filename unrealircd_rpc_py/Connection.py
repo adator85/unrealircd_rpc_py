@@ -1,12 +1,13 @@
+import json.scanner
 import requests, json, urllib3, socket
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
-
+from types import SimpleNamespace
 from dataclasses import dataclass, fields
 
 class Connection:
-    
+
     @dataclass
     class ErrorModel:
         code: int
@@ -26,6 +27,9 @@ class Connection:
         self.req_method = req_method
         self.str_response = ''
         self.json_response = ''
+
+        # Option 2 with Namespaces
+        self.json_response_np: SimpleNamespace
 
         self.Logs: logging
         self.__init_log_system()
@@ -50,7 +54,7 @@ class Connection:
 
         with socket.create_connection((get_host, get_port)) as sock:
             with context.wrap_socket(sock, server_hostname=get_host) as ssock:
-                # Send the HTTP request
+                # Send the HTTPS
 
                 json_request = self.request
                 request = self.__build_headers(credentials, str(json_request))
@@ -73,6 +77,7 @@ class Connection:
                     body = response_str
 
                 self.json_response = json.loads(body)
+                self.json_response_np: SimpleNamespace = json.loads(body, object_hook=lambda d: SimpleNamespace(**d))
 
     def __send_request(self) :
         """Use requests module"""
@@ -87,9 +92,11 @@ class Connection:
         response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
 
         decodedResponse = json.dumps(response.text)
+
         try:
             self.str_response = decodedResponse
             self.json_response = json.loads(json.loads(decodedResponse))
+            self.json_response_np: SimpleNamespace = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
 
         except KeyError as ke:
             self.Logs.error(f"KeyError : {ke}")
@@ -107,8 +114,16 @@ class Connection:
             self.Logs.error(f"General Error {err}")
             self.Logs.error(f"Initial request: {self.request}")
 
-    def __build_headers(self, credentials, data:str) -> str:
+    def __build_headers(self, credentials: str, data:str) -> str:
+        """Build the header for socket connection only
 
+        Args:
+            credentials (_type_): cypted credentials
+            data (str): data we need to send to the server
+
+        Returns:
+            str: Returd the built header
+        """
         headers: str = (
                     f"POST /{self.endpoint} HTTP/1.1\r\n"
                     f"Host: {self.host}\r\n"
