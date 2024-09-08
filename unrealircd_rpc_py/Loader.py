@@ -13,15 +13,43 @@ from unrealircd_rpc_py.Rpc import Rpc
 
 class Loader:
 
-    def __init__(self, url: str, endpoint: Union[Literal['api'], str], host: str, port: int, username: str, password: str,  req_method: Literal['requests', 'socket'] = 'requests', 
-                 debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+        """Initiate connection to unrealircd
 
-        # Init the connection
+        requests and socket:
+        If you use request or socket as req_method you must provide:
+            \n url, username and password
+
+        unixsocket:
+        If you use request or socket as req_method you must provide:
+            \n path_to_socket_file: /path/to/unrealircd/socket/your_socket.socket
+
+        ## Exemples:
+        If you want to use unix socket you need to provide 2 parameters:
+            \n Loader(
+                req_method='unixsocket',
+                path_to_socket_file='/path/to/unrealircd/socket/your_socket.socket'
+                )
+
+        If you want to use remote connexion you need to provide 4 parameters:
+            \n Loader(
+                req_method='requests',
+                url='https://your.rpcjson.link:port/api',
+                username='readonly',
+                password='azerty'
+                )
+
+        Args:
+            req_method (str): The method you want to use, 3 options are available requests | socket | unixsocket
+            url (str, optional): The full url to connect https://your.rpcjson.link:port/api.
+            path_to_socket_file (str, optional): The full path to your unix socket file
+            username (str, optional): Default to None 
+            password (str, optional): Default to None 
+            debug_level (str, optional): NOTSET=0 | DEBUG=10 | INFO=20 | WARN=30 | ERROR=40 | CRITICAL=50 - Default to 20 
+        """
         self.Connection = Connection(
             url=url,
-            endpoint=endpoint,
-            host=host,
-            port=port,
+            path_to_socket_file=path_to_socket_file,
             username=username,
             password=password,
             req_method=req_method,

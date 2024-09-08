@@ -1,5 +1,5 @@
 import json.scanner
-import requests, json, urllib3, socket
+import requests, json, urllib3, socket, re, sys
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
@@ -13,15 +13,24 @@ class Connection:
         code: int
         message: str
 
-    def __init__(self, url: str, endpoint: str, host: str, port: int, username: str, password: str,  req_method: str, debug_level: int) -> None:
+    def __init__(self, req_method:str, url: str, path_to_socket_file: str, username: str, password: str, debug_level: int) -> None:
+
+        self.debug_level = debug_level
+        self.Logs: logging
+        self.__init_log_system()
 
         self.url = url
-        self.endpoint = endpoint
-        self.host = host
-        self.port = port
+        self.path_to_socket_file = path_to_socket_file
+
+        self.endpoint: str = None
+        self.host: str = None
+        self.port: int = 0
         self.username = username
         self.password = password
-        self.debug_level = debug_level
+
+        if not self.__check_url(url) and not url is None:
+            self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
+            sys.exit(3)
 
         self.request: str = ''
         self.req_method = req_method
@@ -31,69 +40,134 @@ class Connection:
         # Option 2 with Namespaces
         self.json_response_np: SimpleNamespace
 
-        self.Logs: logging
-        self.__init_log_system()
-
         self.Error = self.ErrorModel(0, '')
+
+    def __check_url(self, url: str) -> bool:
+        """Check provided url if it follow the format
+
+        Args:
+            url (str): Url to jsonrpc https://your.rpcjson.link:port/api
+
+        Returns:
+            bool: True if url is correct else False
+        """
+        try:
+            response = False
+
+            if url is None:
+                return response
+
+            pattern = r'https?://([a-zA-Z0-9\.-]+):(\d+)/(.+)'
+
+            match = re.match(pattern, url)
+
+            if not match is None:
+                self.host = match.group(1)
+                self.port = match.group(2)
+                self.endpoint = match.group(3)
+                response = True
+
+            return response
+        except NameError as nameerr:
+            self.Logs.critical(f'NameError: {nameerr}')
+
+    def __send_to_unixsocket(self):
+        try:
+
+            sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
+
+            sock.connect(self.path_to_socket_file)
+            sock.settimeout(10)
+
+            if not self.request:
+                return None
+
+            sock.sendall(f'{self.request}\r\n'.encode())
+
+            response = b""
+            chunk = b""
+            pattern = b'\n$'
+
+            while True:
+                chunk = sock.recv(4096)
+                response += chunk
+                if re.findall(pattern, chunk):
+                    break
+
+            str_data = response.decode()
+            self.json_response = json.loads(str_data)
+            self.json_response_np: SimpleNamespace = json.loads(str_data, object_hook=lambda d: SimpleNamespace(**d))
+
+            sock.close()
+
+        except AttributeError as attrerr:
+            self.Logs.error(f'AF_Unix Error: {attrerr}')
+            sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
+        except OSError as oserr:
+            self.Logs.error(f'System Error: {oserr}')
+            return False
+        except Exception as err:
+            self.Logs.error(f'General Error: {err}')
 
     def __send_srequest(self):
         """S For socket connection"""
+        try:
+            get_url = self.url
+            get_host = self.host
+            get_port = self.port
+            get_username = self.username
+            get_password = self.password
+            credentials = base64.b64encode(f"{get_username}:{get_password}".encode()).decode()
 
-        get_url = self.url
-        get_host = self.host
-        get_port = self.port
-        get_username = self.username
-        get_password = self.password
+            # Create a socket and wrap it in an SSL context for HTTPS
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
 
-        credentials = base64.b64encode(f"{get_username}:{get_password}".encode()).decode()
+            with socket.create_connection((get_host, get_port)) as sock:
+                with context.wrap_socket(sock, server_hostname=get_host) as ssock:
+                    # Send the HTTPS
 
-        # Create a socket and wrap it in an SSL context for HTTPS
-        context = ssl.create_default_context()
-        context.check_hostname = False
-        context.verify_mode = ssl.CERT_NONE
+                    json_request = self.request
+                    request = self.__build_headers(credentials, str(json_request))
+                    ssock.sendall(request.encode('utf-8'))
 
-        with socket.create_connection((get_host, get_port)) as sock:
-            with context.wrap_socket(sock, server_hostname=get_host) as ssock:
-                # Send the HTTPS
+                    # Receive the response
+                    response = b""
+                    while True:
+                        chunk = ssock.recv(4096)
+                        if not chunk:
+                            break
+                        response += chunk
 
-                json_request = self.request
-                request = self.__build_headers(credentials, str(json_request))
-                ssock.sendall(request.encode('utf-8'))
+                    # Decode and print the response
+                    response_str = response.decode('utf-8')
+                    header_end = response_str.find("\r\n\r\n")
+                    if header_end != -1:
+                        body = response_str[header_end + 4:]  # Extract the body
+                    else:
+                        body = response_str
 
-                # Receive the response
-                response = b""
-                while True:
-                    chunk = ssock.recv(4096)
-                    if not chunk:
-                        break
-                    response += chunk
+                    self.json_response = json.loads(body)
+                    self.json_response_np: SimpleNamespace = json.loads(body, object_hook=lambda d: SimpleNamespace(**d))
 
-                # Decode and print the response
-                response_str = response.decode('utf-8')
-                header_end = response_str.find("\r\n\r\n")
-                if header_end != -1:
-                    body = response_str[header_end + 4:]  # Extract the body
-                else:
-                    body = response_str
-
-                self.json_response = json.loads(body)
-                self.json_response_np: SimpleNamespace = json.loads(body, object_hook=lambda d: SimpleNamespace(**d))
+        except Exception as err:
+            self.Logs.error(f'General Error: {err}')
 
     def __send_request(self) :
         """Use requests module"""
-
-        verify = False
-
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-        credentials = HTTPBasicAuth(self.username, self.password)
-        jsonrequest = self.request
-
-        response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
-
-        decodedResponse = json.dumps(response.text)
-
         try:
+            verify = False
+
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+            credentials = HTTPBasicAuth(self.username, self.password)
+            jsonrequest = self.request
+
+            response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
+
+            decodedResponse = json.dumps(response.text)
+
             self.str_response = decodedResponse
             self.json_response = json.loads(json.loads(decodedResponse))
             self.json_response_np: SimpleNamespace = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
@@ -105,8 +179,9 @@ class Connection:
             self.Logs.error(f"Timeout : {rt}")
             self.Logs.error(f"Initial request: {self.request}")
         except requests.ConnectionError as ce:
-            self.Logs.error(f"Connection Error : {ce}")
-            self.Logs.error(f"Initial request: {self.request}")
+            self.Logs.critical(f"Connection Error : {ce}")
+            self.Logs.critical(f"Initial request: {self.request}")
+            sys.exit(3)
         except json.decoder.JSONDecodeError as jsonerror:
             self.Logs.error(f"jsonError {jsonerror}")
             self.Logs.error(f"Initial request: {self.request}")
@@ -118,7 +193,7 @@ class Connection:
         """Build the header for socket connection only
 
         Args:
-            credentials (_type_): cypted credentials
+            credentials (str): crypted credentials
             data (str): data we need to send to the server
 
         Returns:
@@ -150,10 +225,10 @@ class Connection:
         """This method will use to run the queries
 
         Args:
-            method (Union[Literal[&#39;stats.get&#39;, &#39;rpc.info&#39;,&#39;user.list&#39;], str]): _description_
-            param (dict, optional): _description_. Defaults to {}.
-            id (int, optional): _description_. Defaults to 123.
-            jsonrpc (str, optional): _description_. Defaults to '2.0'.
+            method (Union[Literal[&#39;stats.get&#39;, &#39;rpc.info&#39;,&#39;user.list&#39;], str]): The method to send to unrealircd
+            param (dict, optional): the paramaters to send to unrealircd. Defaults to {}.
+            id (int, optional): id of the request. Defaults to 123.
+            jsonrpc (str, optional): jsonrpc. Defaults to '2.0'.
 
         Returns:
             str: The correct response
@@ -183,6 +258,8 @@ class Connection:
 
         if self.req_method == 'socket':
             self.__send_srequest()
+        elif self.req_method == 'unixsocket':
+            self.__send_to_unixsocket()
         elif self.req_method == 'requests':
             self.__send_request()
         else:
