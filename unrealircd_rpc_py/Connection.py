@@ -101,11 +101,11 @@ class Connection:
             sock.close()
 
         except AttributeError as attrerr:
-            self.Logs.error(f'AF_Unix Error: {attrerr}')
+            self.Logs.critical(f'AF_Unix Error: {attrerr}')
             sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
         except OSError as oserr:
-            self.Logs.error(f'System Error: {oserr}')
-            return False
+            self.Logs.critical(f'System Error: {oserr}')
+            sys.exit(3)
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
 

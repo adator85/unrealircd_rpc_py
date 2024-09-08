@@ -11,7 +11,7 @@
 
     $ pip3 install unrealircd_rpc_py
 
-## How to work with
+## How to work with (remotly)
 
 This package allows easy interfacing with UnrealIRCd through regular Python3 code, such as:
 
@@ -21,12 +21,8 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
         rpc = Loader(
                 req_method='requests', # you can also use 'socket'
                 url='https://your.irc.domaine.org:8600/api',
-                endpoint='api',
-                host='your.irc.domaine.org',
-                port=8600,
                 username='apiname',
-                password='apiPASSWORD',
-                debug_level=10
+                password='apiPASSWORD'
             )
 
         # Enjoy the power of JSON-RPC
@@ -41,9 +37,40 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
         response = Channels.list_(_object_detail_level=3)
 
         for chan in Channels.DB_CHANNELS:
-            if chan.name == '#welcome':
-                print(f'Channel: {chan.name}')
-                print(f'Created on: {chan.creation_time}')
-                print(f'Bans: {chan.bans}')
-                print(f'Members: {chan.members}')
+            print(f'-' * 16)
+            print(f'Channel: {chan.name}')
+            print(f'Created on: {chan.creation_time}')
+            print(f'Bans: {chan.bans}')
+            print(f'Members: {chan.members}')
+            print(f'-' * 16)
 
+## How to work with (using unix socket locally)
+
+This package allows easy interfacing with UnrealIRCd through regular Python3 code, such as:
+
+        from unrealircd_rpc_py.Loader import Loader
+
+        # Initialize your connexion to unrealircd
+        rpc = Loader(
+                req_method='unixsocket',
+                path_to_socket_file='/path/to/unrealircd/socket/your_socket.socket'
+            )
+
+        # Enjoy the power of JSON-RPC
+
+        User = rpc.User
+        response = User.get('adator')
+
+        print(f'Nickname: {response.name}')
+        print(f'Ip: {response.ip}')
+
+        Channels = rpc.Channel
+        response = Channels.list_(_object_detail_level=3)
+
+        for chan in Channels.DB_CHANNELS:
+            print(f'-' * 16)
+            print(f'Channel: {chan.name}')
+            print(f'Created on: {chan.creation_time}')
+            print(f'Bans: {chan.bans}')
+            print(f'Members: {chan.members}')
+            print(f'-' * 16)
