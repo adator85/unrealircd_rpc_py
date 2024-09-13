@@ -37,7 +37,7 @@ class Server_ban:
         self.Error = Connection.Error
 
     def list_(self) -> Union[list[ModelServerBan], None, bool]:
-        """List server bans (*LINEs).
+        """List server bans (LINEs).
 
         Returns:
             Union[list[ModelServerBan], None, bool]: List of ModelServerBan, None if nothing or False if error
@@ -84,7 +84,7 @@ class Server_ban:
             self.Logs.error(f'General error: {err}')
 
     def get(self, type: str, name: str) -> Union[ModelServerBan, None, bool]:
-        """Retrieve all details of a single server ban (*LINE).
+        """Retrieve all details of a single server ban (LINE).
 
         Args:
             type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
@@ -132,7 +132,7 @@ class Server_ban:
             self.Logs.error(f'General error: {err}')
 
     def add(self, type: str, name: str, reason: str, expire_at: str, duration_sting: str, _set_by: str = None) -> bool:
-        """Add a server ban (*LINE).
+        """Add a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
 
@@ -175,7 +175,7 @@ class Server_ban:
             self.Logs.error(f'General error: {err}')
 
     def del_(self, type: str, name: str, _set_by: str = None) -> bool:
-        """Delete a server ban (*LINE).
+        """Delete a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
 
