@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Literal
 from unrealircd_rpc_py.Connection import Connection
 from unrealircd_rpc_py.User import User
 from unrealircd_rpc_py.Stats import Stats
