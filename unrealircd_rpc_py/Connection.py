@@ -71,6 +71,48 @@ class Connection:
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
 
+    def __send_to_permanent_unixsocket(self):
+        try:
+
+            sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
+
+            sock.connect(self.path_to_socket_file)
+            sock.settimeout(10)
+            connected = True
+
+            if not self.request:
+                return None
+
+            sock.sendall(f'{self.request}\r\n'.encode())
+
+            while connected:
+
+                response = b""
+                chunk = b""
+                pattern = b'\n$'
+
+                while True:
+                    chunk = sock.recv(4096)
+                    response += chunk
+                    if re.findall(pattern, chunk):
+                        break
+
+                str_data = response.decode()
+                self.json_response = json.loads(str_data)
+                self.json_response_np: SimpleNamespace = json.loads(str_data, object_hook=lambda d: SimpleNamespace(**d))
+                print(self.json_response)
+
+            sock.close()
+
+        except AttributeError as attrerr:
+            self.Logs.critical(f'AF_Unix Error: {attrerr}')
+            sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
+        except OSError as oserr:
+            self.Logs.critical(f'System Error: {oserr}')
+            sys.exit(3)
+        except Exception as err:
+            self.Logs.error(f'General Error: {err}')
+
     def __send_to_unixsocket(self):
         try:
 
@@ -260,6 +302,8 @@ class Connection:
             self.__send_srequest()
         elif self.req_method == 'unixsocket':
             self.__send_to_unixsocket()
+        elif self.req_method == 'permanent_unixsocket':
+            self.__send_to_permanent_unixsocket()
         elif self.req_method == 'requests':
             self.__send_request()
         else:
