@@ -53,6 +53,8 @@ class Live:
             if not os.path.exists(path_to_socket_file):
                 return response
 
+            response = True
+
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
