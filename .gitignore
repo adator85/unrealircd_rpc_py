@@ -6,4 +6,5 @@ tests/*
 docs/*
 setup.py
 test.py
+CallbackObject.py
 *.zip
