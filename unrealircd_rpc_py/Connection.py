@@ -1,10 +1,10 @@
 import json.scanner
-import requests, json, urllib3, socket, re, sys
+import requests, json, urllib3, socket, re, sys, threading
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
 from types import SimpleNamespace
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 class Connection:
 
@@ -36,6 +36,7 @@ class Connection:
         self.req_method = req_method
         self.str_response = ''
         self.json_response = ''
+        self.running_threads: list[threading.Thread] = []
 
         # Option 2 with Namespaces
         self.json_response_np: SimpleNamespace
@@ -70,6 +71,72 @@ class Connection:
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
+
+    def create_thread(self, func:object, func_args: tuple = (), run_once:bool = False) -> None:
+        """Create a new thread and store it into running_threads variable
+
+        Args:
+            func (object): The method/function you want to execute via this thread
+            func_args (tuple, optional): Arguments of the function/method. Defaults to ().
+            run_once (bool, optional): If you want to ensure that this method/function run once. Defaults to False.
+        """
+        try:
+            func_name = func.__name__
+
+            if run_once:
+                for thread in self.running_threads:
+                    if thread.getName() == func_name:
+                        return None
+
+            th = threading.Thread(target=func, args=func_args, name=str(func_name), daemon=True)
+            th.start()
+
+            self.running_threads.append(th)
+            self.Logs.debug(f"Thread ID : {str(th.ident)} | Thread name : {th.getName()} | Running Threads : {len(threading.enumerate())}")
+
+        except AssertionError as ae:
+            self.Logs.error(f'{ae}')
+
+    def __send_to_permanent_unixsocket(self):
+        try:
+
+            sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
+
+            sock.connect(self.path_to_socket_file)
+            sock.settimeout(10)
+            connected = True
+
+            if not self.request:
+                return None
+
+            sock.sendall(f'{self.request}\r\n'.encode())
+
+            while connected:
+                
+                # Recieve the data from the rpc server, decode it and split it
+                response = sock.recv(4096).decode().split('\n')
+
+                for bdata in response:
+                    if bdata:
+                        self.json_response = json.loads(bdata)
+                        self.json_response_np: SimpleNamespace = json.loads(bdata, object_hook=lambda d: SimpleNamespace(**d))
+                        print(self.json_response_np)
+                        #print(self.json_response)
+
+            sock.close()
+
+        except AttributeError as attrerr:
+            self.Logs.critical(f'AF_Unix Error: {attrerr}')
+            sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
+        except TimeoutError as timeouterr:
+            self.Logs.critical(f'Timeout Error: {timeouterr}')
+        except OSError as oserr:
+            self.Logs.critical(f'System Error: {oserr}')
+            sys.exit(3)
+        except json.decoder.JSONDecodeError as jsondecoderror:
+            self.Logs.critical(f'Json Decod Error: {jsondecoderror}')
+        except Exception as err:
+            self.Logs.error(f'General Error: {err}')
 
     def __send_to_unixsocket(self):
         try:
@@ -260,6 +327,8 @@ class Connection:
             self.__send_srequest()
         elif self.req_method == 'unixsocket':
             self.__send_to_unixsocket()
+        elif self.req_method == 'permanent_unixsocket':
+            self.__send_to_permanent_unixsocket()
         elif self.req_method == 'requests':
             self.__send_request()
         else:
