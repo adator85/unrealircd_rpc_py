@@ -105,8 +105,8 @@ class Log:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-        #except Exception as err:
-        #    self.Logs.error(f'General error: {err}')
+        except Exception as err:
+            self.Logs.error(f'General error: {err}')
 
     def unsubscribe(self) -> bool:
         """Unsubscribe from all log events.

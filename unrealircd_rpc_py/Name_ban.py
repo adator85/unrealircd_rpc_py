@@ -177,7 +177,7 @@ class Name_ban:
             self.Logs.error(f'General error: {err}')
 
     def del_(self, name: str, _set_by: str = None) -> bool:
-        """Delete a name ban (*LINE).
+        """Delete a name ban (LINE).
 
         Args:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.

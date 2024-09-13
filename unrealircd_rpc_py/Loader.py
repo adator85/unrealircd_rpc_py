@@ -10,6 +10,7 @@ from unrealircd_rpc_py.Server_ban_exeption import Server_ban_exception
 from unrealircd_rpc_py.Spamfilter import Spamfilter
 from unrealircd_rpc_py.Name_ban import Name_ban
 from unrealircd_rpc_py.Rpc import Rpc
+from unrealircd_rpc_py.Log import Log
 
 class Loader:
 
@@ -99,3 +100,7 @@ class Loader:
         # Create Whowas Instance
         self.Whowas = Whowas(self.Connection)
         """The Whowas module instance"""
+        
+        # Create Log Instance
+        self.Log = Log(self.Connection)
+        """The Log module instance"""
