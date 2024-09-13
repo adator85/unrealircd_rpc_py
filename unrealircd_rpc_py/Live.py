@@ -1,5 +1,5 @@
 import json.scanner
-import json, socket, re, sys, threading
+import json, socket, sys, os
 import time, logging, random, asyncio
 from typing import Literal, Union
 from types import SimpleNamespace
@@ -18,6 +18,10 @@ class Live:
         self.Logs: logging
         self.__init_log_system()
 
+        if not self.__check_unix_socket_file(path_to_socket_file=path_to_socket_file):
+            self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
+            sys.exit('please check the full path of your socket file')
+
         self.to_run = getattr(callback_object_instance, callback_method_name)
 
         self.path_to_socket_file = path_to_socket_file
@@ -25,37 +29,29 @@ class Live:
         self.request: str = ''
         self.str_response = ''
         self.json_response = ''
-        self.running_threads: list[threading.Thread] = []
 
         # Option 2 with Namespaces
         self.json_response_np: SimpleNamespace
 
         self.Error = self.ErrorModel(0, '')
 
-    def __check_unix_socket(self, url: str) -> bool:
-        """Check provided url if it follow the format
+    def __check_unix_socket_file(self, path_to_socket_file: str) -> bool:
+        """Check provided full path to socket file if it exist
 
         Args:
-            url (str): Url to jsonrpc https://your.rpcjson.link:port/api
+            path_to_socket_file (str): Full path to unix socket file
 
         Returns:
-            bool: True if url is correct else False
+            bool: True if path is correct else False
         """
         try:
             response = False
 
-            if url is None:
+            if path_to_socket_file is None:
                 return response
-
-            pattern = r'https?://([a-zA-Z0-9\.-]+):(\d+)/(.+)'
-
-            match = re.match(pattern, url)
-
-            if not match is None:
-                self.host = match.group(1)
-                self.port = match.group(2)
-                self.endpoint = match.group(3)
-                response = True
+            
+            if not os.path.exists(path_to_socket_file):
+                return response
 
             return response
         except NameError as nameerr:
@@ -79,8 +75,6 @@ class Live:
                 
                 # Recieve the data from the rpc server, decode it and split it
                 response = sock.recv(4096).decode().split('\n')
-
-                print("...")
 
                 for bdata in response:
                     if bdata:
