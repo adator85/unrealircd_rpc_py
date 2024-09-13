@@ -1,4 +1,4 @@
-*/__pycache__/*
+__pycache__*
 build/*
 .env/*
 *.egg-info/*
@@ -6,4 +6,5 @@ tests/*
 docs/*
 setup.py
 test.py
+CallbackObject.py
 *.zip

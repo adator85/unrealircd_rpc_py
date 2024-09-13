@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Literal
 from unrealircd_rpc_py.Connection import Connection
 from unrealircd_rpc_py.User import User
 from unrealircd_rpc_py.Stats import Stats
@@ -10,10 +10,11 @@ from unrealircd_rpc_py.Server_ban_exeption import Server_ban_exception
 from unrealircd_rpc_py.Spamfilter import Spamfilter
 from unrealircd_rpc_py.Name_ban import Name_ban
 from unrealircd_rpc_py.Rpc import Rpc
+from unrealircd_rpc_py.Log import Log
 
 class Loader:
 
-    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket', 'permanent_unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
         """Initiate connection to unrealircd
 
         requests and socket:
@@ -99,3 +100,7 @@ class Loader:
         # Create Whowas Instance
         self.Whowas = Whowas(self.Connection)
         """The Whowas module instance"""
+        
+        # Create Log Instance
+        self.Log = Log(self.Connection)
+        """The Log module instance"""
