@@ -14,7 +14,7 @@ from unrealircd_rpc_py.Log import Log
 
 class Loader:
 
-    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket', 'permanent_unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
         """Initiate connection to unrealircd
 
         requests and socket:
@@ -100,7 +100,3 @@ class Loader:
         # Create Whowas Instance
         self.Whowas = Whowas(self.Connection)
         """The Whowas module instance"""
-        
-        # Create Log Instance
-        self.Log = Log(self.Connection)
-        """The Log module instance"""

@@ -22,7 +22,6 @@ class Log:
 
     DB_NAME_BANS: list[ModelLog] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
         # Store the original response
@@ -37,11 +36,11 @@ class Log:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self, sources: list = None) -> Union[SimpleNamespace, None, bool]:
+    def list_(self, sources: list = None) -> Union[SimpleNamespace, None]:
         """Fetch past log entries (since boot).
 
         Returns:
-            Union[list[ModelNameBan], None, bool]: List of ModelNameBan, None if nothing or False if error
+            list[ModelNameBan]: List of ModelNameBan, None if nothing or Error see the property
         """
         try:
             response = self.Connection.query(
@@ -53,12 +52,14 @@ class Log:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             return self.response_np
 

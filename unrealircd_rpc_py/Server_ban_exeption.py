@@ -23,7 +23,6 @@ class Server_ban_exception:
 
     DB_SERVERS_BANS_EXCEPTION: list[ModelServerBanException] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
         # Store the original response
@@ -38,11 +37,11 @@ class Server_ban_exception:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelServerBanException], None, bool]:
+    def list_(self) -> Union[list[ModelServerBanException], None]:
         """List server ban exceptions (ELINEs).
 
         Returns:
-            Union[list[ModelServerBanException], None, bool]: List of ModelServerBanException, None if nothing or False if error
+            list[ModelServerBanException]: List of ModelServerBanException, None if nothing see the Error property
         """
         try:
             response = self.Connection.query(method='server_ban_exception.list')
@@ -51,12 +50,14 @@ class Server_ban_exception:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             srvbansexceps = response['result']['list']
 
@@ -86,7 +87,7 @@ class Server_ban_exception:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, name: str) -> Union[ModelServerBanException, None, bool]:
+    def get(self, name: str) -> Union[ModelServerBanException, None]:
         """Retrieve all details of a single server ban exception (ELINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -97,7 +98,7 @@ class Server_ban_exception:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
 
         Returns:
-            Union[ModelServerBanException, None, bool]: The model ModelServerBanException Object | None if nothing happen | False if an error
+            ModelServerBanException (ModelServerBanException): The model ModelServerBanException Object | None if nothing see the Error property
         """
         try:
             response = self.Connection.query(method='server_ban_exception.get', param={'name': name})
@@ -106,12 +107,14 @@ class Server_ban_exception:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             srvbanexcep = response['result']['tkl']
 

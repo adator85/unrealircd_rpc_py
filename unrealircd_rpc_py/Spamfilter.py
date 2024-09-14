@@ -43,11 +43,11 @@ class Spamfilter:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelSpamfilter], None, bool]:
+    def list_(self) -> Union[list[ModelSpamfilter], None]:
         """List spamfilters.
 
         Returns:
-            Union[list[ModelSpamfilter], None, bool]: List of ModelSpamfilter, None if nothing or False if error
+            list[ModelSpamfilter]: List of ModelSpamfilter, None if nothing, see Error property if any error
         """
         try:
             response = self.Connection.query(method='spamfilter.list')
@@ -56,12 +56,14 @@ class Spamfilter:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             spamfilters = response['result']['list']
 
@@ -97,7 +99,7 @@ class Spamfilter:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[ModelSpamfilter, None, bool]:
+    def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[ModelSpamfilter, None]:
         """Retrieve all details of a single spamfilter.
 
         Mandatory arguments (see structure of a spamfilter for an explanation of the fields):
@@ -111,7 +113,7 @@ class Spamfilter:
             spamfilter_targets (str): Only for spamfilters! Which targets the spamfilter must filter on.
 
         Returns:
-            Union[ModelSpamfilter, None, bool]: The Object ModelSpamfilter, None if nothing or False if error
+            ModelSpamfilter: The Object ModelSpamfilter, None if nothing (see Error property)
         """
         try:
             response = self.Connection.query(method='spamfilter.get', param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets})
@@ -120,12 +122,14 @@ class Spamfilter:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             spamfilter = response['result']['tkl']
 

@@ -47,11 +47,11 @@ class User:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelUser], None, bool]:
+    def list_(self) -> Union[list[ModelUser], None]:
         """List users.
 
         Returns:
-            list[ModelUser]: List with an object contains all Users information
+            ModelUser (list[ModelUser]): List with an object contains all Users information
         """
         try:
             response = self.Connection.query('user.list', param={'object_detail_level': 4})
@@ -60,12 +60,14 @@ class User:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             users = response['result']['list']
 
@@ -105,18 +107,16 @@ class User:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, nickoruid: str) -> Union[ModelUser, None, bool]:
+    def get(self, nickoruid: str) -> Union[ModelUser, None]:
         """Get user information
 
         Args:
             nickoruid (str): The nickname or uid of the user
 
         Returns:
-            ModelUser: If success it return the object ModelUser
+            ModelUser (ModelUser): If success it return the object ModelUser
 
-            None (None): if no value found
-
-            False (bool): False if there is an error message
+            None (None): if no value found, Probably you can see Error property
         """
         try:
 
@@ -126,12 +126,14 @@ class User:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             user = response['result']['client']
 

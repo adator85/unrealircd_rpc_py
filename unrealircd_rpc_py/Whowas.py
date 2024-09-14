@@ -39,7 +39,7 @@ class Whowas:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def get(self, _nick: str = None, _ip: str = None, _object_detail_level:int = 2) -> Union[list[ModelWhowas], None, bool]:
+    def get(self, _nick: str = None, _ip: str = None, _object_detail_level:int = 2) -> Union[list[ModelWhowas], None]:
         """Get WHOWAS history of a user. 6.1.0+
 
         Args:
@@ -48,7 +48,7 @@ class Whowas:
             _object_detail_level (int, optional): set the detail of the response object, this is similar to the Detail level column in Structure of a client object. In this RPC call it defaults to 2 if this parameter is not specified. Defaults to 2.
 
         Returns:
-            [ModelWhowas, None, bool]: If success it return the object ModelWhowas | None if nothing | False if error
+            List[ModelWhowas]: If success it return the object ModelWhowas | None if nothing or error, see Error property
         """
         try:
             response = self.Connection.query('whowas.get', param={'nick': _nick, 'ip': _ip, 'object_detail_level': _object_detail_level})
@@ -57,12 +57,14 @@ class Whowas:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             whowass = response['result']['list']
 

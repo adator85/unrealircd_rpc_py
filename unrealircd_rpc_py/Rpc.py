@@ -28,11 +28,11 @@ class Rpc:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def info(self) -> Union[list[ModelRpcInfo], None, bool]:
+    def info(self) -> Union[list[ModelRpcInfo], None]:
         """A response object, with in the result object a "methods" object which is a list of: the API method with in that the name, module name and module version.
 
         Returns:
-            Union[list[ModelRpcInfo], None, bool]: List of ModelRpcInfo, None if nothing or False if error
+            list[ModelRpcInfo]: List of ModelRpcInfo, None if nothing see the Error property
         """
         try:
             response = self.Connection.query(method='rpc.info')
@@ -41,12 +41,14 @@ class Rpc:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             rpcinfos = response['result']['methods']
 
