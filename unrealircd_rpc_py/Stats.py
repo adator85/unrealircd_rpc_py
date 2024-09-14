@@ -42,7 +42,7 @@ class Stats:
             _object_detail_level (int, optional): set the detail of the response object. The user.countries will be included from level 1+. The default object_detail_level is 1. Defaults to 1.
 
         Returns:
-            Union[list[ModelStats], None, bool]: _description_
+            list[ModelStats]: The Stats model or None if there is an error see Error Property
         """
         try:
             response = self.Connection.query('stats.get', param={'object_detail_level': _object_detail_level})
@@ -50,10 +50,15 @@ class Stats:
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
+            if response is None:
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
+
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             stats = response['result']
 

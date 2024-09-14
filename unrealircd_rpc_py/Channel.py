@@ -36,7 +36,7 @@ class Channel:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self, _object_detail_level: int = 1) -> Union[list[ModelChannel], None, bool]:
+    def list_(self, _object_detail_level: int = 1) -> Union[list[ModelChannel], None]:
         """List channels.
 
         if you want to have more details increase the level or see the level you want by visiting this page:
@@ -47,7 +47,7 @@ class Channel:
             _object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a channel. In this RPC call it defaults to 1 if this parameter is not specified. Defaults to 1.
 
         Returns:
-            Union[list[ModelChannel], None, bool]: List of ModelChannel, None if nothing or False if error
+            ModelChannel: List of ModelChannel, None if nothing see the Error property
         """
         try:
             response = self.Connection.query(method='channel.list', param={'object_detail_level': _object_detail_level})
@@ -56,12 +56,14 @@ class Channel:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             channels = response['result']['list']
 
@@ -89,7 +91,7 @@ class Channel:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, channel: str, _object_detail_level: int = 3) -> Union[ModelChannel, None, bool]:
+    def get(self, channel: str, _object_detail_level: int = 3) -> Union[ModelChannel, None]:
         """Retrieve all details of a single channel. 
         This returns more information than a channel.list call, see the end of Structure of a channel.
 
@@ -98,7 +100,7 @@ class Channel:
             _object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a channel. In this RPC call it defaults to 3 if this parameter is not specified. Defaults to 3.
 
         Returns:
-            Union[ModelChannel, None, bool]: ModelChannel, None if nothing or False if error
+            ModelChannel: The ModelChannel, None if nothing see Error property
         """
         try:
             response = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': _object_detail_level})
@@ -107,12 +109,14 @@ class Channel:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             channel = response['result']['channel']
 
