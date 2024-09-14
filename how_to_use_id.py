@@ -18,7 +18,7 @@ try:
 
     get_user = rpc.User.get('adator')
     print(get_user.name, get_user.hostname, sep=' / ')
-    
+
     # Use Channel object
     Channels = rpc.Channel.list_()
     for c in Channels:
