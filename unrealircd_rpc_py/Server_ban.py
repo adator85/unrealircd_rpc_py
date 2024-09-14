@@ -36,11 +36,11 @@ class Server_ban:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelServerBan], None, bool]:
+    def list_(self) -> Union[list[ModelServerBan], None]:
         """List server bans (LINEs).
 
         Returns:
-            Union[list[ModelServerBan], None, bool]: List of ModelServerBan, None if nothing or False if error
+            list[ModelServerBan]: List of ModelServerBan, None if nothing see the Error property
         """
         try:
             response = self.Connection.query(method='server_ban.list')
@@ -49,12 +49,14 @@ class Server_ban:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             srvbans = response['result']['list']
 
@@ -83,7 +85,7 @@ class Server_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, type: str, name: str) -> Union[ModelServerBan, None, bool]:
+    def get(self, type: str, name: str) -> Union[ModelServerBan, None]:
         """Retrieve all details of a single server ban (LINE).
 
         Args:
@@ -91,7 +93,7 @@ class Server_ban:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
 
         Returns:
-            Union[ModelServerBan, None, bool]: The model Object | None if nothing happen | False if an error
+            ModelServerBan (ModelServerBan): The model Object | None if nothing happen see Error property
         """
         try:
             response = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
@@ -100,12 +102,14 @@ class Server_ban:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             srvban = response['result']['tkl']
 

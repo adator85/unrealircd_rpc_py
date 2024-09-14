@@ -73,7 +73,7 @@ class Server:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelServer], None, bool]:
+    def list_(self) -> Union[list[ModelServer], None]:
         """List servers.
 
         Returns:
@@ -85,10 +85,15 @@ class Server:
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
+            if response is None:
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
+
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             servers = response['result']['list']
 
@@ -130,7 +135,7 @@ class Server:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, _serverorsid: str = None) -> Union[ModelServer, None, bool]:
+    def get(self, _serverorsid: str = None) -> Union[ModelServer, None]:
         """Retrieve all details of a single server.
 
         Args:
@@ -146,10 +151,15 @@ class Server:
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
+            if response is None:
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
+
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             server = response['result']['server']
 
@@ -190,7 +200,7 @@ class Server:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def rehash(self, _serverorsid: str = None) -> Union[ModelRehash, None, bool]:
+    def rehash(self, _serverorsid: str = None) -> Union[ModelRehash, None]:
         """Rehash the server.
 
         IMPORTANT: If all servers on your network have rpc.modules.default.conf included then this can return an object with full rehash details.
@@ -200,7 +210,7 @@ class Server:
             _serverorsid (str, optional): the server name (or SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
 
         Returns:
-            bool: True if success or False if failed
+            ModelRehash: True if success or False if failed
         """
         try:
             response = self.Connection.query('server.rehash', {'server': _serverorsid})
@@ -209,11 +219,13 @@ class Server:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Connection.set_error(response)
-                return False
+                return None
 
             rehash = response['result']
 
@@ -303,7 +315,7 @@ class Server:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def module_list(self, _serverorsid: str = None) -> Union[list[ModelModules], None, bool]:
+    def module_list(self, _serverorsid: str = None) -> Union[list[ModelModules], None]:
         """Get the module list (list of loaded modules) on a server.
 
         IMPORTANT: This only works with remote servers if all servers on your network have rpc.modules.default.conf included.
@@ -323,11 +335,13 @@ class Server:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Connection.set_error(response)
-                return False
+                return None
 
             modules = response['result']['list']
 
