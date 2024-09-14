@@ -22,7 +22,6 @@ class Name_ban:
 
     DB_NAME_BANS: list[ModelNameBan] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
         # Store the original response
@@ -37,11 +36,11 @@ class Name_ban:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelNameBan], None, bool]:
+    def list_(self) -> Union[list[ModelNameBan], None]:
         """List name bans (qlines).
 
         Returns:
-            Union[list[ModelNameBan], None, bool]: List of ModelNameBan, None if nothing or False if error
+            ModelNameBan: List of ModelNameBan, None if nothing see Error property
         """
         try:
             response = self.Connection.query(method='name_ban.list')
@@ -50,12 +49,14 @@ class Name_ban:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             namebans = response['result']['list']
 
@@ -84,14 +85,14 @@ class Name_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, name: str) -> Union[ModelNameBan, None, bool]:
+    def get(self, name: str) -> Union[ModelNameBan, None]:
         """Retrieve all details of a single name ban (qline).
 
         Args:
             name (str): name of the ban, eg *C*h*a*n*s*e*r*v*
 
         Returns:
-            Union[ModelNameBan, None, bool]: The Object ModelNameBan, None if nothing or False if error
+            Union[ModelNameBan, None, bool]: The Object ModelNameBan, None if nothing see Error property
         """
         try:
             response = self.Connection.query(method='name_ban.get', param={"name": name})
@@ -100,12 +101,14 @@ class Name_ban:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                return False
+                error = {"error": {"code": -1, "message": "Empty response"}}
+                self.Connection.set_error(error)
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.set_error(response)
-                return False
+                return None
 
             nameban = response['result']['tkl']
 

@@ -58,14 +58,12 @@ class Live:
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
-  
+
     async def __send_to_permanent_unixsocket(self):
         try:
 
             sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
-
             sock.connect(self.path_to_socket_file)
-            # sock.settimeout(10)
             connected = True
 
             if not self.request:
@@ -74,7 +72,6 @@ class Live:
             sock.sendall(f'{self.request}\r\n'.encode())
 
             while connected:
-                
                 # Recieve the data from the rpc server, decode it and split it
                 response = sock.recv(4096).decode().split('\n')
 
@@ -111,7 +108,7 @@ class Live:
     def execute_async_method(self):
         asyncio.run(self.query('log.subscribe', param={"sources": ["all"]}))
 
-    async def query(self, method: Union[Literal['stats.get', 'rpc.info','user.list'], str], param: dict = {}, id: int = 123, jsonrpc:str = '2.0') -> Union[str, any, None, bool]:
+    async def query(self, method: Union[Literal['log.subscribe', 'log.unsubscribe'], str], param: dict = {}, id: int = 123, jsonrpc:str = '2.0') -> Union[str, any, None, bool]:
         """This method will use to run the queries
 
         Args:
