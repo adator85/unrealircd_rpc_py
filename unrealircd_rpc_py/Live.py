@@ -66,14 +66,13 @@ class Live:
 
             sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
             sock.connect(self.path_to_socket_file)
-            connected = True
 
             if not self.request:
                 return None
 
             sock.sendall(f'{self.request}\r\n'.encode())
 
-            while connected:
+            while self.connected:
                 # Recieve the data from the rpc server, decode it and split it
                 response = sock.recv(4096).decode().split('\n')
 
