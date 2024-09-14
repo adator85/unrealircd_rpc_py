@@ -30,6 +30,8 @@ class Live:
         self.str_response = ''
         self.json_response = ''
 
+        self.connected: bool = True
+
         # Option 2 with Namespaces
         self.json_response_np: SimpleNamespace
 
@@ -105,8 +107,22 @@ class Live:
                             encoding='UTF-8',
                             format='%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
 
-    def execute_async_method(self):
-        asyncio.run(self.query('log.subscribe', param={"sources": ["all"]}))
+    def subscribe(self, param: dict = {"sources": ["all"]}):
+        """Subscribe to the rpc server stream
+        param exemple: 
+        \n ["!debug","all"] would give you all log messages except for debug messages
+        see: https://www.unrealircd.org/docs/List_of_all_log_messages
+        Args:
+            param (dict, optional): The ressources you want to subscribe. Defaults to {"sources": ["all"]}.
+        """
+        asyncio.run(self.query('log.subscribe', param=param))
+
+    def unsubscribe(self):
+        """Run a del timer to trigger an event and then unsubscribe from the stream
+        """
+        self.connected = False
+        asyncio.run(self.query(method='rpc.del_timer', param={"timer_id":"timer_impossible_to_find_as_i_am_not_a_teapot"}))
+        asyncio.run(self.query(method='log.unsubscribe'))
 
     async def query(self, method: Union[Literal['log.subscribe', 'log.unsubscribe'], str], param: dict = {}, id: int = 123, jsonrpc:str = '2.0') -> Union[str, any, None, bool]:
         """This method will use to run the queries
@@ -144,7 +160,6 @@ class Live:
         self.request = json.dumps(response)
 
         await asyncio.gather(self.__send_to_permanent_unixsocket())
-        # self.__send_to_permanent_unixsocket()
 
         if self.json_response == '':
             return False
