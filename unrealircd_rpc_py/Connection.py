@@ -29,10 +29,6 @@ class Connection:
         self.username = username
         self.password = password
 
-        if not self.__check_url(url) and not url is None:
-            self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
-            sys.exit(3)
-
         self.request: str = ''
         self.req_method = req_method
         self.str_response = ''
@@ -164,6 +160,11 @@ class Connection:
     def __send_srequest(self):
         """S For socket connection"""
         try:
+
+            if not self.__check_url(self.url) and not self.url is None:
+                self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
+                return None
+
             get_url = self.url
             get_host = self.host
             get_port = self.port
@@ -215,6 +216,11 @@ class Connection:
     def __send_request(self) :
         """Use requests module"""
         try:
+
+            if not self.__check_url(self.url) and not self.url is None:
+                self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
+                return None
+
             verify = False
 
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
