@@ -18,6 +18,8 @@ class Live:
         self.Logs: logging
         self.__init_log_system()
 
+        self.Error = self.ErrorModel(0, '')
+
         if not self.__check_unix_socket_file(path_to_socket_file=path_to_socket_file):
             self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
             self.Error.code = -1
@@ -36,8 +38,6 @@ class Live:
 
         # Option 2 with Namespaces
         self.json_response_np: SimpleNamespace
-
-        self.Error = self.ErrorModel(0, '')
 
     def __check_unix_socket_file(self, path_to_socket_file: str) -> bool:
         """Check provided full path to socket file if it exist
