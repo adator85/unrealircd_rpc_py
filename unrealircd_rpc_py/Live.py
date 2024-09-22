@@ -24,7 +24,7 @@ class Live:
             self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
             self.Error.code = -1
             self.Error.message = 'The socket file is not available, please check the full path of your socket file'
-            sys.exit('please check the full path of your socket file')
+            return None
 
         self.to_run = getattr(callback_object_instance, callback_method_name)
 
