@@ -1,5 +1,5 @@
 import json.scanner
-import requests, json, urllib3, socket, re, sys, traceback
+import requests, json, urllib3, socket, re, sys, os
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
@@ -76,6 +76,34 @@ class Connection:
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
 
+    def __check_unix_socket_file(self, path_to_socket_file: str) -> bool:
+        """Check provided full path to socket file if it exist
+
+        Args:
+            path_to_socket_file (str): Full path to unix socket file
+
+        Returns:
+            bool: True if path is correct else False
+        """
+        try:
+            response = False
+
+            if path_to_socket_file is None:
+                self.Error.code = -1
+                self.Error.message = 'The Path to your socket file is empty ? please be sure that you are providing the correct socket path'
+                return response
+
+            if not os.path.exists(path_to_socket_file):
+                self.Error.code = -1
+                self.Error.message = 'The Path to your socket file is wrong ? please make sure that you are providing the correct socket path'
+                return response
+
+            response = True
+
+            return response
+        except NameError as nameerr:
+            self.Logs.critical(f'NameError: {nameerr}')
+
     def __is_error_connection(self, response: str) -> bool:
         """If True, it means that there is an error
 
@@ -100,6 +128,9 @@ class Connection:
             sock.connect(self.path_to_socket_file)
             sock.settimeout(10)
 
+            if not self.__check_unix_socket_file(self.path_to_socket_file):
+                return None
+
             if not self.request:
                 return None
 
@@ -123,6 +154,8 @@ class Connection:
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
+            self.Error.code = -1
+            self.Error.message = 'AF_UNIX Are you sure you want to use Unix socket ?'
             sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
         except OSError as oserr:
             self.Logs.critical(f'System Error: {oserr}')
