@@ -55,8 +55,6 @@ class Connection:
             response = False
 
             if url is None:
-                self.Error.code = -1
-                self.Error.message = 'You must provide the url in this format: https://your.rpcjson.link:port/api'
                 return response
 
             pattern = r'https?://([a-zA-Z0-9\.-]+):(\d+)/(.+)'
