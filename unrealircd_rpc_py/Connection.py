@@ -119,11 +119,11 @@ class Connection:
 
             sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
 
-            sock.connect(self.path_to_socket_file)
-            sock.settimeout(10)
-
             if not self.__check_unix_socket_file(self.path_to_socket_file):
                 return None
+
+            sock.connect(self.path_to_socket_file)
+            sock.settimeout(10)
 
             if not self.request:
                 return None
