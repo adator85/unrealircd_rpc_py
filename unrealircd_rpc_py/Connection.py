@@ -1,5 +1,5 @@
 import json.scanner
-import requests, json, urllib3, socket, re, sys
+import requests, json, urllib3, socket, re, sys, traceback
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
@@ -18,6 +18,7 @@ class Connection:
         self.debug_level = debug_level
         self.Logs: logging
         self.__init_log_system()
+        self.Error = self.ErrorModel(0, '')
 
         self.url = url
         self.path_to_socket_file = path_to_socket_file
@@ -37,10 +38,9 @@ class Connection:
         self.str_response = ''
         self.json_response = ''
 
-        # Option 2 with Namespaces
+        # Option 2 with Namespacescs
         self.json_response_np: SimpleNamespace
-
-        self.Error = self.ErrorModel(0, '')
+        self.query('stats.get')
 
     def __check_url(self, url: str) -> bool:
         """Check provided url if it follow the format
@@ -55,6 +55,8 @@ class Connection:
             response = False
 
             if url is None:
+                self.Error.code = -1
+                self.Error.message = 'You must provide the url in this format: https://your.rpcjson.link:port/api'
                 return response
 
             pattern = r'https?://([a-zA-Z0-9\.-]+):(\d+)/(.+)'
@@ -66,10 +68,29 @@ class Connection:
                 self.port = match.group(2)
                 self.endpoint = match.group(3)
                 response = True
+            else:
+                self.Error.code = -1
+                self.Error.message = 'You must provide the url in this format: https://your.rpcjson.link:port/api'
 
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
+
+    def __is_error_connection(self, response: str) -> bool:
+        """If True, it means that there is an error
+
+        Args:
+            response (str): The response to analyse
+
+        Returns:
+            bool: True if there is a connection error
+        """
+        if 'authentication required' == response.lower().strip():
+            self.Error.code = -1
+            self.Error.message = '>> Authentication required'
+            return True
+        else:
+            return False
 
     def __send_to_unixsocket(self):
         try:
@@ -148,11 +169,17 @@ class Connection:
                     else:
                         body = response_str
 
+                    if self.__is_error_connection(body):
+                        return None
+
                     self.json_response = json.loads(body)
                     self.json_response_np: SimpleNamespace = json.loads(body, object_hook=lambda d: SimpleNamespace(**d))
 
+        except (socket.error, ssl.SSLError) as serror:
+            self.Logs.error(f'Socket Error: {serror}')
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
+            # self.Logs.error(f'General Error: {traceback.format_exc()}')
 
     def __send_request(self) :
         """Use requests module"""
@@ -165,6 +192,9 @@ class Connection:
             jsonrequest = self.request
 
             response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
+
+            if self.__is_error_connection(response.text):
+                return None
 
             decodedResponse = json.dumps(response.text)
 
@@ -181,7 +211,6 @@ class Connection:
         except requests.ConnectionError as ce:
             self.Logs.critical(f"Connection Error : {ce}")
             self.Logs.critical(f"Initial request: {self.request}")
-            sys.exit(3)
         except json.decoder.JSONDecodeError as jsonerror:
             self.Logs.error(f"jsonError {jsonerror}")
             self.Logs.error(f"Initial request: {self.request}")
