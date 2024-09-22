@@ -150,10 +150,8 @@ class Connection:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
             self.Error.code = -1
             self.Error.message = 'AF_UNIX Are you sure you want to use Unix socket ?'
-            sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
         except OSError as oserr:
             self.Logs.critical(f'System Error: {oserr}')
-            sys.exit(3)
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
 
