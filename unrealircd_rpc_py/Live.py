@@ -20,6 +20,8 @@ class Live:
 
         if not self.__check_unix_socket_file(path_to_socket_file=path_to_socket_file):
             self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
+            self.Error.code = -1
+            self.Error.message = 'The socket file is not available, please check the full path of your socket file'
             sys.exit('please check the full path of your socket file')
 
         self.to_run = getattr(callback_object_instance, callback_method_name)
