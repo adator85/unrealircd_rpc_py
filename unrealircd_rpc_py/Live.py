@@ -1,5 +1,5 @@
 import json.scanner
-import json, socket, sys, os
+import json, socket, os
 import time, logging, random, asyncio
 from typing import Literal, Union
 from types import SimpleNamespace
@@ -88,12 +88,10 @@ class Live:
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
-            sys.exit('AF_UNIX Are you sure you want to use Unix socket ?')
         except TimeoutError as timeouterr:
             self.Logs.critical(f'Timeout Error: {timeouterr}')
         except OSError as oserr:
             self.Logs.critical(f'System Error: {oserr}')
-            sys.exit(3)
         except json.decoder.JSONDecodeError as jsondecoderror:
             self.Logs.critical(f'Json Decod Error: {jsondecoderror}')
         except Exception as err:

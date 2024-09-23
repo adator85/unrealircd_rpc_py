@@ -1,5 +1,5 @@
 import json.scanner
-import requests, json, urllib3, socket, re, sys, os
+import requests, json, urllib3, socket, re, os
 from requests.auth import HTTPBasicAuth
 import base64, ssl, time, logging, random
 from typing import Literal, Union
