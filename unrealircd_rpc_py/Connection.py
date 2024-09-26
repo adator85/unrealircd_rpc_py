@@ -10,6 +10,7 @@ class Connection:
 
     @dataclass
     class ErrorModel:
+        """This model will contain the error if any"""
         code: int
         message: str
 
@@ -19,6 +20,7 @@ class Connection:
         self.Logs: logging
         self.__init_log_system()
         self.Error = self.ErrorModel(0, '')
+        """This model will contain the error if any"""
 
         self.url = url
         self.path_to_socket_file = path_to_socket_file
