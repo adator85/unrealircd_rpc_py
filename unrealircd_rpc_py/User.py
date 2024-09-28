@@ -1,37 +1,12 @@
+import traceback
 from types import SimpleNamespace
 from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class User:
 
-    @dataclass
-    class ModelUser:
-        name: str
-        id: str
-        hostname: str
-        ip: str
-        details: str
-        server_port: int
-        client_port: int
-        connected_since: str
-        idle_since: str
-        username: str
-        realname: str
-        vhost: str
-        cloakedhost: str
-        servername: str
-        reputation: int
-        security_groups: list
-        modes: str
-        channels: list[dict[str, str]]
-        cipher: str
-        certfp: str
-        country_code: str
-        asn: str
-        asname: str
-
-    DB_USER: list[ModelUser] = []
+    DB_USER: list[dfn.Client] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -47,13 +22,14 @@ class User:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelUser], None]:
+    def list_(self) -> Union[list[dfn.Client], None]:
         """List users.
 
         Returns:
-            ModelUser (list[ModelUser]): List with an object contains all Users information
+            Client (list[Client]): List with an object contains all Clients information
         """
         try:
+            self.DB_USER = []
             response = self.Connection.query('user.list', param={'object_detail_level': 4})
 
             self.response_raw = response
@@ -69,34 +45,30 @@ class User:
                 self.Connection.set_error(response)
                 return None
 
-            users = response['result']['list']
+            users:list[dict] = response['result']['list']
 
             for user in users:
+                user_for_client = user.copy()
+                user_for_User: dict = user['user'].copy()
+
+                for key in ['geoip','tls','user']:
+                    user_for_client.pop(key, None)
+
+                for key in ['channels','security-groups']:
+                    user_for_User.pop(key, None)
+
+                UserModel = dfn.User(
+                    **user_for_User,
+                    security_groups=user.get('user', []).get('security-groups', []),
+                    channels=[dfn.UserChannel(**chans) for chans in user.get('user', None).get('channels', None)]
+                )
+
                 self.DB_USER.append(
-                        self.ModelUser(
-                            name=user['name'] if 'name' in user else None,
-                            id=user['id'] if 'id' in user else None,
-                            hostname=user['hostname'] if 'hostname' in user else None,
-                            ip=user['ip'] if 'ip' in user else None,
-                            details=user['details'] if 'details' in user else None,
-                            server_port=user['server_port'] if 'server_port' in user else 0,
-                            client_port=user['client_port'] if 'client_port' in user else 0,
-                            connected_since=user['connected_since'] if 'connected_since' in user else None,
-                            idle_since=user['idle_since'] if 'idle_since' in user else None,
-                            username=user['user']['username'] if 'user' in user and 'username' in user['user'] else None,
-                            realname=user['user']['realname'] if 'user' in user and 'realname' in user['user'] else None,
-                            vhost=user['user']['vhost'] if 'user' in user and 'vhost' in user['user'] else None,
-                            cloakedhost=user['user']['cloakedhost'] if 'user' in user and 'cloakedhost' in user['user'] else None,
-                            servername=user['user']['servername'] if 'user' in user and 'servername' in user['user'] else None,
-                            reputation=user['user']['reputation'] if 'user' in user and 'reputation' in user['user'] else 0,
-                            security_groups=user['user']['security-groups'] if 'user' in user and 'security-groups' in user['user'] else [],
-                            modes=user['user']['modes'] if 'user' in user and 'modes' in user['user'] else None,
-                            channels=user['user']['channels'] if 'user' in user and 'channels' in user['user'] else [{}],
-                            cipher=user['tls']['cipher'] if 'tls' in user and 'cipher' in user['tls'] else None,
-                            certfp=user['tls']['certfp'] if 'tls' in user and 'certfp' in user['tls'] else None,
-                            country_code=user['geoip']['country_code'] if 'geoip' in user and 'country_code' in user['geoip'] else None,
-                            asn=user['geoip']['asn'] if 'geoip' in user and 'asn' in user['geoip'] else None,
-                            asname=user['geoip']['asname'] if 'geoip' in user and 'asname' in user['geoip'] else None
+                        dfn.Client(
+                            **user_for_client,
+                            geoip=dfn.Geoip(**user.get('geoip', {})),
+                            tls=dfn.Tls(**user.get('tls', {})),
+                            user=UserModel
                         )
                 )
 
@@ -106,15 +78,16 @@ class User:
             self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            self.Logs.error(traceback.format_exc())
 
-    def get(self, nickoruid: str) -> Union[ModelUser, None]:
+    def get(self, nickoruid: str) -> Union[dfn.Client, None]:
         """Get user information
 
         Args:
             nickoruid (str): The nickname or uid of the user
 
         Returns:
-            ModelUser (ModelUser): If success it return the object ModelUser
+            Client (Client): If success it return the object Client
 
             None (None): if no value found, Probably you can see Error property
         """
@@ -137,31 +110,27 @@ class User:
 
             user = response['result']['client']
 
-            userObject = self.ModelUser(
-                    name=user['name'] if 'name' in user else None,
-                    id=user['id'] if 'id' in user else None,
-                    hostname=user['hostname'] if 'hostname' in user else None,
-                    ip=user['ip'] if 'ip' in user else None,
-                    details=user['details'] if 'details' in user else None,
-                    server_port=user['server_port'] if 'server_port' in user else 0,
-                    client_port=user['client_port'] if 'client_port' in user else 0,
-                    connected_since=user['connected_since'] if 'connected_since' in user else None,
-                    idle_since=user['idle_since'] if 'idle_since' in user  else None,
-                    username=user['user']['username'] if 'user' in user and 'username' in user['user'] else None,
-                    realname=user['user']['realname'] if 'user' in user and 'realname' in user['user'] else None,
-                    vhost=user['user']['vhost'] if 'user' in user and 'vhost' in user['user'] else None,
-                    cloakedhost=user['user']['cloakedhost'] if 'user' in user and 'cloakedhost' in user['user'] else None,
-                    servername=user['user']['servername'] if 'user' in user and 'servername' in user['user'] else None,
-                    reputation=user['user']['reputation'] if 'user' in user and 'reputation' in user['user'] else 0,
-                    security_groups=user['user']['security-groups'] if 'user' in user and 'security-groups' in user['user'] else [],
-                    modes=user['user']['modes'] if 'user' in user and 'modes' in user['user'] else None,
-                    channels=user['user']['channels'] if 'user' in user and 'channels' in user['user'] else [],
-                    cipher=user['tls']['cipher'] if 'tls' in user and 'cipher' in user['tls'] else None,
-                    certfp=user['tls']['certfp'] if 'tls' in user and 'certfp' in user['tls'] else None,
-                    country_code=user['geoip']['country_code'] if 'geoip' in user and 'country_code' in user['geoip'] else None,
-                    asn=user['geoip']['asn'] if 'geoip' in user and 'asn' in user['geoip'] else None,
-                    asname=user['geoip']['asname'] if 'geoip' in user and 'asname' in user['geoip'] else None
-                )
+            user_for_client = user.copy()
+            user_for_User: dict = user['user'].copy()
+
+            for key in ['geoip','tls','user']:
+                user_for_client.pop(key, None)
+
+            for key in ['channels','security-groups']:
+                user_for_User.pop(key, None)
+
+            UserModel = dfn.User(
+                **user_for_User,
+                security_groups=user.get('user', []).get('security-groups', []),
+                channels=[dfn.UserChannel(**chans) for chans in user.get('user', None).get('channels', None)]
+            )
+
+            userObject = dfn.Client(
+                        **user_for_client,
+                        geoip=dfn.Geoip(**user.get('geoip', {})),
+                        tls=dfn.Tls(**user.get('tls', {})),
+                        user=UserModel
+                    )
 
             return userObject
 

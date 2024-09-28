@@ -44,6 +44,7 @@ class Server_ban_exception:
             list[ModelServerBanException]: List of ModelServerBanException, None if nothing see the Error property
         """
         try:
+            self.DB_SERVERS_BANS_EXCEPTION = []
             response = self.Connection.query(method='server_ban_exception.list')
 
             self.response_raw = response

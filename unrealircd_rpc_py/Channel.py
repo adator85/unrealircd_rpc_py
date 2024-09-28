@@ -1,26 +1,12 @@
+import traceback
 from types import SimpleNamespace
 from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class Channel:
 
-    @dataclass
-    class ModelChannel:
-        name: str
-        creation_time: str
-        num_users: int
-        topic: str
-        topic_set_by: str
-        topic_set_at: str
-        modes: str
-        bans: list
-        ban_exemptions: list
-        invite_exceptions: list
-        members: list
-
-    DB_CHANNELS: list[ModelChannel] = []
-
+    DB_CHANNELS: list[dfn.Channel] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -36,7 +22,7 @@ class Channel:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self, _object_detail_level: int = 1) -> Union[list[ModelChannel], None]:
+    def list_(self, _object_detail_level: int = 1) -> Union[list[dfn.Channel], None]:
         """List channels.
 
         if you want to have more details increase the level or see the level you want by visiting this page:
@@ -47,9 +33,10 @@ class Channel:
             _object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a channel. In this RPC call it defaults to 1 if this parameter is not specified. Defaults to 1.
 
         Returns:
-            ModelChannel: List of ModelChannel, None if nothing see the Error property
+            Channel: List of Channel object, None if nothing see the Error property
         """
         try:
+            self.DB_CHANNELS = []
             response = self.Connection.query(method='channel.list', param={'object_detail_level': _object_detail_level})
 
             self.response_raw = response
@@ -65,22 +52,21 @@ class Channel:
                 self.Connection.set_error(response)
                 return None
 
-            channels = response['result']['list']
+            channels: list[dict] = response['result']['list']
 
             for channel in channels:
+                channel_copy: dict = channel.copy()
+
+                for key in ['bans','ban_exemptions','invite_exceptions', 'members']:
+                    channel_copy.pop(key, None)
+
                 self.DB_CHANNELS.append(
-                        self.ModelChannel(
-                            name=channel['name'] if 'name' in channel else None,
-                            creation_time=channel['creation_time'] if 'creation_time' in channel else None,
-                            num_users=channel['num_users'] if 'num_users' in channel else 0,
-                            topic=channel['topic'] if 'topic' in channel else None,
-                            topic_set_by=channel['topic_set_by'] if 'topic_set_by' in channel else None,
-                            topic_set_at=channel['topic_set_at'] if 'topic_set_at' in channel else None,
-                            modes=channel['modes'] if 'modes' in channel else None,
-                            bans=channel['bans'] if 'bans' in channel else [],
-                            ban_exemptions=channel['ban_exemptions'] if 'ban_exemptions' in channel else [],
-                            invite_exceptions=channel['invite_exceptions'] if 'invite_exceptions' in channel else [],
-                            members=channel['members'] if 'members' in channel else []
+                        dfn.Channel(
+                            **channel_copy,
+                            bans=[dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
+                            ban_exemptions=[dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
+                            invite_exceptions=[dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
+                            members=[dfn.ChannelMembers(**member) for member in channel.get('members', [])]
                         )
                 )
 
@@ -90,8 +76,9 @@ class Channel:
             self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            self.Logs.error(traceback.format_exc())
 
-    def get(self, channel: str, _object_detail_level: int = 3) -> Union[ModelChannel, None]:
+    def get(self, channel: str, _object_detail_level: int = 3) -> Union[dfn.Channel, None]:
         """Retrieve all details of a single channel. 
         This returns more information than a channel.list call, see the end of Structure of a channel.
 
@@ -100,7 +87,7 @@ class Channel:
             _object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a channel. In this RPC call it defaults to 3 if this parameter is not specified. Defaults to 3.
 
         Returns:
-            ModelChannel: The ModelChannel, None if nothing see Error property
+            Channel: The Channel Object, None if nothing see Error property
         """
         try:
             response = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': _object_detail_level})
@@ -118,21 +105,19 @@ class Channel:
                 self.Connection.set_error(response)
                 return None
 
-            channel = response['result']['channel']
+            channel: dict = response['result']['channel']
 
-            objectChannel = self.ModelChannel(
-                            name=channel['name'] if 'name' in channel else None,
-                            creation_time=channel['creation_time'] if 'creation_time' in channel else None,
-                            num_users=channel['num_users'] if 'num_users' in channel else 0,
-                            topic=channel['topic'] if 'topic' in channel else None,
-                            topic_set_by=channel['topic_set_by'] if 'topic_set_by' in channel else None,
-                            topic_set_at=channel['topic_set_at'] if 'topic_set_at' in channel else None,
-                            modes=channel['modes'] if 'modes' in channel else None,
-                            bans=channel['bans'] if 'bans' in channel else [],
-                            ban_exemptions=channel['ban_exemptions'] if 'ban_exemptions' in channel else [],
-                            invite_exceptions=channel['invite_exceptions'] if 'invite_exceptions' in channel else [],
-                            members=channel['members'] if 'members' in channel else []
-                        )
+            channel_copy: dict = channel.copy()
+            for key in ['bans','ban_exemptions','invite_exceptions', 'members']:
+                    channel_copy.pop(key, None)
+
+            objectChannel = dfn.Channel(
+                        **channel_copy,
+                        bans=[dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
+                        ban_exemptions=[dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
+                        invite_exceptions=[dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
+                        members=[dfn.ChannelMembers(**member) for member in channel.get('members', [])]
+                    )
 
             return objectChannel
 
