@@ -43,6 +43,7 @@ class Server_ban:
             list[ModelServerBan]: List of ModelServerBan, None if nothing see the Error property
         """
         try:
+            self.DB_SERVERS_BANS = []
             response = self.Connection.query(method='server_ban.list')
 
             self.response_raw = response

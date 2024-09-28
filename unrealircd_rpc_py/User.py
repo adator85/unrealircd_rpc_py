@@ -54,6 +54,7 @@ class User:
             ModelUser (list[ModelUser]): List with an object contains all Users information
         """
         try:
+            self.DB_USER = []
             response = self.Connection.query('user.list', param={'object_detail_level': 4})
 
             self.response_raw = response
