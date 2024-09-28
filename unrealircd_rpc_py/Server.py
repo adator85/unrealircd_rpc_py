@@ -80,6 +80,7 @@ class Server:
             list[ModelServer]: List with an object contains all Servers information
         """
         try:
+            self.DB_SERVER = []
             response = self.Connection.query('server.list')
 
             self.response_raw = response
@@ -329,6 +330,7 @@ class Server:
             bool: if False means that we have an error
         """
         try:
+            self.DB_MODULES = []
             response = self.Connection.query('server.module_list', {'server': _serverorsid})
 
             self.response_raw = response

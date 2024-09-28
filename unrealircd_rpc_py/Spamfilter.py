@@ -50,6 +50,7 @@ class Spamfilter:
             list[ModelSpamfilter]: List of ModelSpamfilter, None if nothing, see Error property if any error
         """
         try:
+            self.DB_SPAMFILTERS = []
             response = self.Connection.query(method='spamfilter.list')
 
             self.response_raw = response
