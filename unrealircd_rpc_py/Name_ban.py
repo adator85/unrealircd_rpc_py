@@ -43,6 +43,7 @@ class Name_ban:
             ModelNameBan: List of ModelNameBan, None if nothing see Error property
         """
         try:
+            self.DB_NAME_BANS = []
             response = self.Connection.query(method='name_ban.list')
 
             self.response_raw = response

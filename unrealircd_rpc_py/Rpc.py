@@ -13,7 +13,6 @@ class Rpc:
 
     DB_RPC_INFO: list[ModelRpcInfo] = []
 
-
     def __init__(self, Connection: Connection) -> None:
 
         # Store the original response
@@ -35,6 +34,7 @@ class Rpc:
             list[ModelRpcInfo]: List of ModelRpcInfo, None if nothing see the Error property
         """
         try:
+            self.DB_RPC_INFO = []
             response = self.Connection.query(method='rpc.info')
 
             self.response_raw = response
@@ -57,7 +57,7 @@ class Rpc:
                         self.ModelRpcInfo(
                             name=rpcinfos[rpcinfo]['name'],
                             module=rpcinfos[rpcinfo]['module'],
-                            version=rpcinfos[rpcinfo]['version'],
+                            version=rpcinfos[rpcinfo]['version']
                             )
                 )
 
