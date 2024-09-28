@@ -167,5 +167,6 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
     Stats = rpc.Stats
     User = rpc.User
     Whowas = rpc.Whowas
+    Log = rpc.Log # This feature requires unrealIRCd 6.1.8 or higher
 
 ```

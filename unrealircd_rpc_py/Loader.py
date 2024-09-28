@@ -100,3 +100,7 @@ class Loader:
         # Create Whowas Instance
         self.Whowas = Whowas(self.Connection)
         """The Whowas module instance"""
+
+        # Create Log Instance
+        self.Log = Log(self.Connection)
+        """This include mainly send method requires unrealIRCd 6.1.8 or higher"""
