@@ -51,6 +51,7 @@ class Whowas:
             List[ModelWhowas]: If success it return the object ModelWhowas | None if nothing or error, see Error property
         """
         try:
+            self.DB_WHOWAS = []
             response = self.Connection.query('whowas.get', param={'nick': _nick, 'ip': _ip, 'object_detail_level': _object_detail_level})
 
             self.response_raw = response

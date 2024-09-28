@@ -50,6 +50,7 @@ class Channel:
             ModelChannel: List of ModelChannel, None if nothing see the Error property
         """
         try:
+            self.DB_CHANNELS = []
             response = self.Connection.query(method='channel.list', param={'object_detail_level': _object_detail_level})
 
             self.response_raw = response

@@ -35,6 +35,7 @@ class Rpc:
             list[ModelRpcInfo]: List of ModelRpcInfo, None if nothing see the Error property
         """
         try:
+            self.DB_RPC_INFO = []
             response = self.Connection.query(method='rpc.info')
 
             self.response_raw = response
