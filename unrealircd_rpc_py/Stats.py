@@ -89,5 +89,3 @@ class Stats:
             self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-
-
