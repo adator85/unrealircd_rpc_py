@@ -39,7 +39,7 @@ class Whowas:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def get(self, _nick: str = None, _ip: str = None, _object_detail_level:int = 2) -> Union[list[ModelWhowas], None]:
+    def get(self, nick: str = None, ip: str = None, object_detail_level:int = 2) -> Union[list[ModelWhowas], None]:
         """Get WHOWAS history of a user. 6.1.0+
 
         Args:
@@ -52,20 +52,22 @@ class Whowas:
         """
         try:
             self.DB_WHOWAS = []
-            response = self.Connection.query('whowas.get', param={'nick': _nick, 'ip': _ip, 'object_detail_level': _object_detail_level})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('whowas.get', param={'nick': nick, 'ip': ip, 'object_detail_level': object_detail_level})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return False
 
             whowass = response['result']['list']
 

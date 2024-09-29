@@ -29,6 +29,8 @@ class Log:
             list[ModelNameBan]: List of ModelNameBan, None if nothing or Error see the property
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='log.list', 
                 param={"sources": sources}
@@ -38,13 +40,13 @@ class Log:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
+                self.Connection.EngineError.set_error(**response["error"])
                 return None
 
             return self.response_np
@@ -71,6 +73,8 @@ class Log:
         """
         # waiting for the documentation.
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                     method='log.send',
                     param={"msg": msg, "level": level, "subsystem": subsystem, "event_id": event_id, "timestamp": timestamp}
@@ -80,8 +84,8 @@ class Log:
             self.response_np = self.Connection.json_response_np
 
             if 'error' in response:
-                self.Logs.error(response["error"])
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             self.Logs.debug(response)

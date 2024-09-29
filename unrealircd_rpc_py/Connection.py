@@ -1,26 +1,23 @@
 import json.scanner
 import requests, json, urllib3, socket, re, os
 from requests.auth import HTTPBasicAuth
-import base64, ssl, time, logging, random
+import base64, ssl, time, logging, random, traceback
 from typing import Literal, Union
 from types import SimpleNamespace
-from dataclasses import dataclass
+from unrealircd_rpc_py.EngineError import EngineError
 
 class Connection:
-
-    @dataclass
-    class ErrorModel:
-        """This model will contain the error if any"""
-        code: int
-        message: str
 
     def __init__(self, req_method:str, url: str, path_to_socket_file: str, username: str, password: str, debug_level: int) -> None:
 
         self.debug_level = debug_level
         self.Logs: logging
         self.__init_log_system()
-        self.Error = self.ErrorModel(0, '')
-        """This model will contain the error if any"""
+
+        self.EngineError = EngineError()
+        """Engine Error: should be used to set errors"""
+        self.Error = self.EngineError.Error
+        """Error attribut: to be used to print errors"""
 
         self.url = url
         self.path_to_socket_file = path_to_socket_file
@@ -65,8 +62,10 @@ class Connection:
                 self.endpoint = match.group(3)
                 response = True
             else:
-                self.Error.code = -1
-                self.Error.message = 'You must provide the url in this format: https://your.rpcjson.link:port/api'
+                self.EngineError.set_error(
+                    code=-1,
+                    message='You must provide the url in this format: https://your.rpcjson.link:port/api'
+                )
 
             return response
         except NameError as nameerr:
@@ -85,13 +84,17 @@ class Connection:
             response = False
 
             if path_to_socket_file is None:
-                self.Error.code = -1
-                self.Error.message = 'The Path to your socket file is empty ? please be sure that you are providing the correct socket path'
+                self.EngineError.set_error(
+                    code=-1,
+                    message='The Path to your socket file is empty ? please be sure that you are providing the correct socket path'
+                )
                 return response
 
             if not os.path.exists(path_to_socket_file):
-                self.Error.code = -1
-                self.Error.message = 'The Path to your socket file is wrong ? please make sure that you are providing the correct socket path'
+                self.EngineError.set_error(
+                    code=-1,
+                    message='The Path to your socket file is wrong ? please make sure that you are providing the correct socket path'
+                )
                 return response
 
             response = True
@@ -110,14 +113,30 @@ class Connection:
             bool: True if there is a connection error
         """
         if 'authentication required' == response.lower().strip():
-            self.Error.code = -1
-            self.Error.message = '>> Authentication required'
+            self.EngineError.set_error(
+                code=-1,
+                message='>> Authentication required <<'
+            )
+            return True
+        elif 'authentication required' in response.lower().strip():
+            self.EngineError.set_error(
+                code=-1,
+                message='>> Authentication required <<'
+            )
+            return True
+        elif "('Connection aborted.'," in response.lower().strip():
+            self.EngineError.set_error(
+                code=-1,
+                message='>> Connection aborted <<'
+            )
             return True
         else:
             return False
 
     def __send_to_unixsocket(self):
         try:
+            self.json_response = None
+            self.json_response_np: SimpleNamespace = None
 
             sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
 
@@ -150,22 +169,24 @@ class Connection:
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
-            self.Error.code = -1
-            self.Error.message = 'AF_UNIX Are you sure you want to use Unix socket ?'
+            self.EngineError.set_error(code=-1, message=attrerr)
         except OSError as oserr:
             self.Logs.critical(f'System Error: {oserr}')
+            self.EngineError.set_error(code=-1, message=oserr)
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
+            self.EngineError.set_error(code=-1, message=err)
 
     def __send_srequest(self):
         """S For socket connection"""
         try:
+            self.json_response = None
+            self.json_response_np: SimpleNamespace = None
 
             if not self.__check_url(self.url) and not self.url is None:
                 self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
                 return None
 
-            get_url = self.url
             get_host = self.host
             get_port = self.port
             get_username = self.username
@@ -209,13 +230,19 @@ class Connection:
 
         except (socket.error, ssl.SSLError) as serror:
             self.Logs.error(f'Socket Error: {serror}')
+            self.EngineError.set_error(code=-1, message=f'Socket Error: {serror}')
+        except json.JSONDecodeError as jdecErr:
+            self.Logs.error(f'Socket Error: {jdecErr}')
+            self.EngineError.set_error(code=-1, message=f'Json Decode Error: {jdecErr}')
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
-            # self.Logs.error(f'General Error: {traceback.format_exc()}')
+            self.EngineError.set_error(code=-1, message=f'General Error: {err}')
 
     def __send_request(self) :
         """Use requests module"""
         try:
+            self.json_response = None
+            self.json_response_np: SimpleNamespace = None
 
             if not self.__check_url(self.url) and not self.url is None:
                 self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
@@ -230,6 +257,10 @@ class Connection:
 
             response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
 
+            if response.status_code != 200:
+                self.EngineError.set_error(code=-1, message=f"Status code {response.status_code} | {response.reason}")
+                return None
+            
             if self.__is_error_connection(response.text):
                 return None
 
@@ -242,18 +273,24 @@ class Connection:
         except KeyError as ke:
             self.Logs.error(f"KeyError : {ke}")
             self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=ke)
         except requests.ReadTimeout as rt:
             self.Logs.error(f"Timeout : {rt}")
             self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'Timeout: {rt}')
         except requests.ConnectionError as ce:
             self.Logs.critical(f"Connection Error : {ce}")
             self.Logs.critical(f"Initial request: {self.request}")
+            if 'connection aborted.' in str(ce).lower().strip():
+                self.EngineError.set_error(code=-1, message=f'>> Connection Aborted <<')
         except json.decoder.JSONDecodeError as jsonerror:
             self.Logs.error(f"jsonError {jsonerror}")
             self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'Json Error: {jsonerror}')
         except Exception as err:
             self.Logs.error(f"General Error {err}")
             self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'General Error: {err}')
 
     def __build_headers(self, credentials: str, data:str) -> str:
         """Build the header for socket connection only
@@ -329,26 +366,10 @@ class Connection:
         elif self.req_method == 'requests':
             self.__send_request()
         else:
-            print('No valid request method')
+            self.Logs.warning('No valid request method')
+            self.EngineError.set_error(code=-1, message='<< Invalid method >>')
 
-        if self.json_response == '':
-            return False
+        if self.json_response == '' or self.json_response is None:
+            return None
 
         return self.json_response
-
-    def set_error(self, json_error: dict):
-        """set the error
-
-        Args:
-            code (int): the error code
-            message (str): the message of the error
-        """
-        try:
-            if 'error' in json_error:
-                self.Error.code=json_error['error']['code']
-                self.Error.message=json_error['error']['message']
-
-        except KeyError as ke:
-            self.Logs.error(ke)
-        except Exception as err:
-            self.Logs.error(err)

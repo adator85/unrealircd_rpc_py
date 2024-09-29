@@ -1,17 +1,10 @@
 from types import SimpleNamespace
-from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class Rpc:
 
-    @dataclass
-    class ModelRpcInfo:
-        name: str
-        module: str
-        version: str
-
-    DB_RPC_INFO: list[ModelRpcInfo] = []
+    DB_RPC_INFO: list[dfn.RpcInfo] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -27,46 +20,46 @@ class Rpc:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def info(self) -> Union[list[ModelRpcInfo], None]:
+    def info(self) -> list[dfn.RpcInfo]:
         """A response object, with in the result object a "methods" object which is a list of: the API method with in that the name, module name and module version.
 
         Returns:
-            list[ModelRpcInfo]: List of ModelRpcInfo, None if nothing see the Error property
+            list[RpcInfo]: List of RpcInfo, empty object if error
         """
         try:
             self.DB_RPC_INFO = []
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(method='rpc.info')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return self.DB_RPC_INFO
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return self.DB_RPC_INFO
 
-            rpcinfos = response['result']['methods']
+            rpcinfos: dict[dict, dict] = response['result']['methods']
 
             for rpcinfo in rpcinfos:
                 self.DB_RPC_INFO.append(
-                        self.ModelRpcInfo(
-                            name=rpcinfos[rpcinfo]['name'],
-                            module=rpcinfos[rpcinfo]['module'],
-                            version=rpcinfos[rpcinfo]['version']
-                            )
+                        dfn.RpcInfo(**rpcinfos.get(rpcinfo, {}))
                 )
 
             return self.DB_RPC_INFO
 
         except KeyError as ke:
             self.Logs.error(ke)
+            return self.DB_RPC_INFO
         except Exception as err:
             self.Logs.error(err)
+            return self.DB_RPC_INFO
 
     def set_issuer(self, name: str) -> bool:
         """Set who is the issuer of all the subsequent commands that are done. 
@@ -82,6 +75,8 @@ class Rpc:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='rpc.set_issuer', 
                 param={"name": name}
@@ -91,10 +86,13 @@ class Rpc:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:
@@ -106,8 +104,10 @@ class Rpc:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return True
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return True
 
     def add_timer(self, timer_id: str, every_msec: int, request: dict) -> bool:
         """Add a timer so a JSON-RPC request is executed at certain intervals.
@@ -127,6 +127,8 @@ class Rpc:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='rpc.add_timer',
                 param={"timer_id": timer_id, "every_msec": every_msec, "request": request}
@@ -136,10 +138,13 @@ class Rpc:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:
@@ -166,6 +171,8 @@ class Rpc:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='rpc.del_timer', 
                 param={"timer_id": timer_id}
@@ -175,10 +182,13 @@ class Rpc:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:

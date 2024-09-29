@@ -1,63 +1,12 @@
 from types import SimpleNamespace
 from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class Server:
 
-    @dataclass
-    class ModelServer:
-        name: str
-        id: str
-        hostname: str
-        ip: str
-        details: str
-        server_port: int
-        client_port: int
-        connected_since: str
-        idle_since: str
-
-        server_info: str
-        server_uplink: str
-        server_num_users: int
-        server_boot_time: str
-        server_synced: bool
-        server_ulined: bool
-
-        server_features_software: str
-        server_features_protocol: int
-        server_features_usermodes: str
-        server_features_chanmodes: list[str]
-        server_features_rpc_modules: list[dict[str, any]]
-
-        tls_cipher: str
-        tls_certfp: str
-   
-    @dataclass
-    class ModelRehash:
-        name: str
-        id: str
-        hostname: str
-        ip: str
-        server_port: int
-        details: str
-        connected_since: str
-        idle_since: str
-        log: list[dict]
-        success: bool
-
-    @dataclass
-    class ModelModules:
-        name: str
-        version: str
-        author: str
-        description: str
-        third_party: bool
-        permanent: bool
-        permanent_but_reloadable: bool
-
-    DB_SERVER: list[ModelServer] = []
-    DB_MODULES: list[ModelModules] = []
+    DB_SERVER: list[dfn.ClientServer] = []
+    DB_MODULES: list[dfn.ServerModule] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -73,13 +22,15 @@ class Server:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelServer], None]:
+    def list_(self) -> list[dfn.ClientServer]:
         """List servers.
 
         Returns:
-            list[ModelServer]: List with an object contains all Servers information
+            list[ClientServer]: List with an object contains all Servers information
         """
         try:
+            self.Connection.EngineError.init_error()
+
             self.DB_SERVER = []
             response = self.Connection.query('server.list')
 
@@ -87,112 +38,117 @@ class Server:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return False
 
             servers = response['result']['list']
 
             for server in servers:
-                self.DB_SERVER.append(
-                        self.ModelServer(
-                            name=server['name'] if 'name' in server else None,
-                            id=server['id'] if 'id' in server else None,
-                            hostname=server['hostname'] if 'hostname' in server else None,
-                            ip=server['ip'] if 'ip' in server else None,
-                            details=server['details'] if 'details' in server else None,
-                            server_port=server['server_port'] if 'server_port' in server else 0,
-                            client_port=server['client_port'] if 'client_port' in server else 0,
-                            connected_since=server['connected_since'] if 'connected_since' in server else None,
-                            idle_since=server['idle_since'] if 'idle_since' in server else None,
+                ClientServer: dict = server.copy()
+                ServerForClientServer: dict = server.get('server', {}).copy()
+                FeaturesForServer: dict = server.get('server', {}).get('features', {}).copy()
 
-                            server_info=server['server']['info'] if 'server' in server and 'info' in server['server'] else None,
-                            server_uplink=server['server']['uplink'] if 'server' in server and 'uplink' in server['server'] else None,
-                            server_num_users=server['server']['num_users'] if 'server' in server and 'num_users' in server['server'] else 0,
-                            server_boot_time=server['server']['boot_time'] if 'server' in server and 'boot_time' in server['server'] else None,
-                            server_synced=server['server']['synced'] if 'server' in server and 'synced' in server['server'] else False,
-                            server_ulined=server['server']['ulined'] if 'server' in server and 'ulined' in server['server'] else False,
+                for key in ['server', 'tls']:
+                    ClientServer.pop(key, None)
 
-                            server_features_software=server['server']['features']['software'] if 'server' in server and 'features' in server['server'] and 'software' in server['server']['features'] else None,
-                            server_features_protocol=server['server']['features']['protocol'] if 'server' in server and 'features' in server['server'] and 'protocol' in server['server']['features'] else 0,
-                            server_features_usermodes=server['server']['features']['usermodes'] if 'server' in server and 'features' in server['server'] and 'usermodes' in server['server']['features'] else None,
-                            server_features_chanmodes=server['server']['features']['chanmodes'] if 'server' in server and 'features' in server['server'] and 'chanmodes' in server['server']['features'] else [],
-                            server_features_rpc_modules=server['server']['features']['rpc_modules'] if 'server' in server and 'features' in server['server'] and 'rpc_modules' in server['server']['features'] else [],
+                for key in ['features']:
+                    ServerForClientServer.pop(key, None)
 
-                            tls_cipher=server['tls']['cipher'] if 'tls' in server and 'cipher' in server['tls'] else None,
-                            tls_certfp=server['tls']['certfp'] if 'tls' in server and 'certfp' in server['tls'] else None
-                        )
+                for key in ['rpc_modules']:
+                    FeaturesForServer.pop(key, None)
+
+                FeaturesObject = dfn.ServerFeatures(
+                    **FeaturesForServer,
+                    rpc_modules=[dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
+                    )
+
+                ServerObject = dfn.Server(
+                    **ServerForClientServer,
+                    features=FeaturesObject
                 )
+
+                ClientServerObject = dfn.ClientServer(
+                    **ClientServer,
+                    server=ServerObject,
+                    tls=dfn.Tls(**server.get('tls', {}))
+                )
+
+                self.DB_SERVER.append(ClientServerObject)
 
             return self.DB_SERVER
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return self.DB_SERVER
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return self.DB_SERVER
 
-    def get(self, _serverorsid: str = None) -> Union[ModelServer, None]:
+    def get(self, serverorsid: str = None) -> Union[dfn.ClientServer, None]:
         """Retrieve all details of a single server.
 
         Args:
-            _server (str, optional): the server name (or the SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
+            serverorsid (str, optional): the server name (or the SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
 
         Returns:
-            Union[ModelServer, None, bool]: The ModelServer if success | None if nothing | False if error
+            ClientServer (ClientServer, None): The ClientServer if success | None if error
         """
         try:
+            self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('server.get', {'server': _serverorsid})
+            response = self.Connection.query('server.get', {'server': serverorsid})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return False
 
             server = response['result']['server']
 
-            serverObject = self.ModelServer(
-                    name=server['name'] if 'name' in server else None,
-                    id=server['id'] if 'id' in server else None,
-                    hostname=server['hostname'] if 'hostname' in server else None,
-                    ip=server['ip'] if 'ip' in server else None,
-                    details=server['details'] if 'details' in server else None,
-                    server_port=server['server_port'] if 'server_port' in server else 0,
-                    client_port=server['client_port'] if 'client_port' in server else 0,
-                    connected_since=server['connected_since'] if 'connected_since' in server else None,
-                    idle_since=server['idle_since'] if 'idle_since' in server else None,
+            ClientServer: dict = server.copy()
+            ServerForClientServer: dict = server.get('server', {}).copy()
+            FeaturesForServer: dict = server.get('server', {}).get('features', {}).copy()
 
-                    server_info=server['server']['info'] if 'server' in server and 'info' in server['server'] else None,
-                    server_uplink=server['server']['uplink'] if 'server' in server and 'uplink' in server['server'] else None,
-                    server_num_users=server['server']['num_users'] if 'server' in server and 'num_users' in server['server'] else None,
-                    server_boot_time=server['server']['boot_time'] if 'server' in server and 'boot_time' in server['server'] else None,
-                    server_synced=server['server']['synced'] if 'server' in server and 'synced' in server['server'] else None,
-                    server_ulined=server['server']['ulined'] if 'server' in server and 'ulined' in server['server'] else None,
+            for key in ['server', 'tls']:
+                ClientServer.pop(key, None)
 
-                    server_features_software=server['server']['features']['software'] if 'server' in server and 'features' in server['server'] and 'software' in server['server']['features'] else None,
-                    server_features_protocol=server['server']['features']['protocol'] if 'server' in server and 'features' in server['server'] and 'protocol' in server['server']['features'] else None,
-                    server_features_usermodes=server['server']['features']['usermodes'] if 'server' in server and 'features' in server['server'] and 'usermodes' in server['server']['features'] else None,
-                    server_features_chanmodes=server['server']['features']['chanmodes'] if 'server' in server and 'features' in server['server'] and 'chanmodes' in server['server']['features'] else None,
-                    server_features_rpc_modules=server['server']['features']['rpc_modules'] if 'server' in server and 'features' in server['server'] and 'rpc_modules' in server['server']['features'] else None,
+            for key in ['features']:
+                ServerForClientServer.pop(key, None)
 
-                    tls_cipher=server['tls']['cipher'] if 'tls' in server and 'cipher' in server['tls'] else None,
-                    tls_certfp=server['tls']['certfp'] if 'tls' in server and 'certfp' in server['tls'] else None
+            for key in ['rpc_modules']:
+                FeaturesForServer.pop(key, None)
+
+            FeaturesObject = dfn.ServerFeatures(
+                **FeaturesForServer,
+                rpc_modules=[dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
                 )
 
-            return serverObject
+            ServerObject = dfn.Server(
+                **ServerForClientServer,
+                features=FeaturesObject
+            )
+
+            ClientServerObject = dfn.ClientServer(
+                **ClientServer,
+                server=ServerObject,
+                tls=dfn.Tls(**server.get('tls', {}))
+            )
+
+            return ClientServerObject
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
@@ -201,56 +157,68 @@ class Server:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def rehash(self, _serverorsid: str = None) -> Union[ModelRehash, None]:
+    def rehash(self, serverorsid: str = None) -> Union[dfn.ServerRehash, None]:
         """Rehash the server.
 
         IMPORTANT: If all servers on your network have rpc.modules.default.conf included then this can return an object with full rehash details.
         Otherwise, for remote rehashes a simple boolean 'true' result is returned.
 
         Args:
-            _serverorsid (str, optional): the server name (or SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
+            serverorsid (str, optional): the server name (or SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
 
         Returns:
-            ModelRehash: True if success or False if failed
+            ServerRehash: True if success or False if failed
         """
         try:
-            response = self.Connection.query('server.rehash', {'server': _serverorsid})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('server.rehash', {'server': serverorsid})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return None
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            rehash = response['result']
+            rehash: dict = response['result']
 
-            rehashObject = self.ModelRehash(
-                        name=rehash['rehash_client']['name'] if 'rehash_client' in rehash and 'name' in rehash['rehash_client'] else None,
-                        id=rehash['rehash_client']['id'] if 'rehash_client' in rehash and 'id' in rehash['rehash_client'] else None,
-                        hostname=rehash['rehash_client']['hostname'] if 'rehash_client' in rehash and 'hostname' in rehash['rehash_client'] else None,
-                        ip=rehash['rehash_client']['ip'] if 'rehash_client' in rehash and 'ip' in rehash['rehash_client'] else None,
-                        server_port=rehash['rehash_client']['server_port'] if 'rehash_client' in rehash and 'server_port' in rehash['rehash_client'] else 0,
-                        details=rehash['rehash_client']['details'] if 'rehash_client' in rehash and 'details' in rehash['rehash_client'] else None,
-                        connected_since=rehash['rehash_client']['connected_since'] if 'rehash_client' in rehash and 'connected_since' in rehash['rehash_client'] else None,
-                        idle_since=rehash['rehash_client']['idle_since'] if 'rehash_client' in rehash and 'idle_since' in rehash['rehash_client'] else None,
-                        log=rehash['log'] if 'log' in rehash else [],
-                        success=rehash['success'] if 'success' in rehash else False
+            rehash_log: list[dict] = rehash.get('log', []).copy()
+
+            DB_REHASH_LOG: list[dfn.ServerRehashLog] = []
+            for rlog in rehash_log:
+                rlog_copy = rlog.copy()
+                rlog_copy.pop('source', None)
+                DB_REHASH_LOG.append(
+                    dfn.ServerRehashLog(
+                        **rlog_copy,
+                        source=dfn.ServerRehashLogSource(**rlog.get('source', {}))
                     )
+                )
+
+            rehashObject = dfn.ServerRehash(
+                rehash_client=dfn.ServerRehashClient(**rehash.get("rehash_client", {})),
+                log=DB_REHASH_LOG,
+                success=rehash.get('success', None)
+            )
 
             return rehashObject
 
         except TypeError as te:
             self.Logs.error(f'Type Error: {te}')
+            return None
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return None
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
+            return None
 
     def connect(self, link: str) -> bool:
         """Make server link (connect) to another server.
@@ -266,16 +234,21 @@ class Server:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('server.connect', {'link': link})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -297,16 +270,21 @@ class Server:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('server.disconnect', {'link': link})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -316,53 +294,47 @@ class Server:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def module_list(self, _serverorsid: str = None) -> Union[list[ModelModules], None]:
+    def module_list(self, serverorsid: str = None) -> list[dfn.ServerModule]:
         """Get the module list (list of loaded modules) on a server.
 
         IMPORTANT: This only works with remote servers if all servers on your network have rpc.modules.default.conf included.
         This is because then the JSON-RPC request/response is forwarded over the IRC network.
 
         Args:
-            _serverorsid (str): The server name (or the SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API).. Defaults to None.
+            serverorsid (str, optional): The server name (or the SID). If not specified then the current server is assumed (the one you connect to via the JSON-RPC API). Defaults to None.
 
         Returns:
-            ModelModules: if success you will find the object DB_MODULES
-            bool: if False means that we have an error
+            ServerModule (ServerModule): if success you will find the object ServerModule
         """
         try:
             self.DB_MODULES = []
-            response = self.Connection.query('server.module_list', {'server': _serverorsid})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('server.module_list', {'server': serverorsid})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return self.DB_MODULES
 
             if 'error' in response:
-                self.Connection.set_error(response)
-                return None
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
+                return self.DB_MODULES
 
             modules = response['result']['list']
 
             for module in modules:
-                self.DB_MODULES.append(
-                    self.ModelModules(
-                        name=module['name'] if 'name' in module else None,
-                        version=module['version'] if 'version' in module else None,
-                        author=module['author'] if 'author' in module else None,
-                        description=module['description'] if 'description' in module else None,
-                        third_party=module['third_party'] if 'third_party' in module else None,
-                        permanent=module['permanent'] if 'permanent' in module else None,
-                        permanent_but_reloadable=module['permanent_but_reloadable'] if 'permanent_but_reloadable' in module else None
-                    )
-                )
+                self.DB_MODULES.append(dfn.ServerModule(**module))
 
             return self.DB_MODULES
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return self.DB_MODULES
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return self.DB_MODULES
