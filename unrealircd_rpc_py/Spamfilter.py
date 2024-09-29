@@ -29,8 +29,8 @@ class Spamfilter:
         """
         try:
             self.Connection.EngineError.init_error()
-
             self.DB_SPAMFILTERS = []
+
             response = self.Connection.query(method='spamfilter.list')
 
             self.response_raw = response

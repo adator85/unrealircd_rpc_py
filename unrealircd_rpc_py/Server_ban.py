@@ -30,8 +30,8 @@ class Server_ban:
         """
         try:
             self.Connection.EngineError.init_error()
-
             self.DB_SERVERS_BANS = []
+
             response = self.Connection.query(method='server_ban.list')
 
             self.response_raw = response
