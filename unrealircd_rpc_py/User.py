@@ -1,6 +1,6 @@
 import traceback
 from types import SimpleNamespace
-from typing import Union
+from typing import Union, Literal
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as dfn
 
@@ -20,36 +20,41 @@ class User:
         # Get the Connection instance
         self.Connection = Connection
         self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Error = self.Connection.Error
 
-    def list_(self) -> Union[list[dfn.Client], None]:
-        """List users.
+    def list_(self, object_detail_level: Literal[0, 1, 2, 4] = 2) -> list[dfn.Client]:
+        """List users
+
+        Args:
+            object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a client object. Defaults to 2.
 
         Returns:
-            Client (list[Client]): List with an object contains all Clients information
+            Client ([dfn.Client]): List of Client Object
         """
         try:
             self.DB_USER = []
-            response = self.Connection.query('user.list', param={'object_detail_level': 4})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('user.list', param={'object_detail_level': object_detail_level})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return self.DB_USER
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return self.DB_USER
 
             users:list[dict] = response['result']['list']
 
             for user in users:
                 user_for_client = user.copy()
-                user_for_User: dict = user['user'].copy()
+                user_for_User: dict = user.get('user', {}).copy()
 
                 for key in ['geoip','tls','user']:
                     user_for_client.pop(key, None)
@@ -59,8 +64,8 @@ class User:
 
                 UserModel = dfn.User(
                     **user_for_User,
-                    security_groups=user.get('user', []).get('security-groups', []),
-                    channels=[dfn.UserChannel(**chans) for chans in user.get('user', None).get('channels', None)]
+                    security_groups=user.get('user', {}).get('security-groups', []),
+                    channels=[dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
                 )
 
                 self.DB_USER.append(
@@ -76,9 +81,12 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            self.Connection.EngineError.set_error(code=-3,message=ke)
+            return self.DB_USER
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            self.Logs.error(traceback.format_exc())
+            self.Connection.EngineError.set_error(code=-3,message=ke)
+            return self.DB_USER
 
     def get(self, nickoruid: str) -> Union[dfn.Client, None]:
         """Get user information
@@ -87,11 +95,10 @@ class User:
             nickoruid (str): The nickname or uid of the user
 
         Returns:
-            Client (Client): If success it return the object Client
-
-            None (None): if no value found, Probably you can see Error property
+            Client (Client): The object Client
         """
         try:
+            self.Connection.EngineError.init_error()
 
             response = self.Connection.query('user.get', {'nick': nickoruid})
 
@@ -99,19 +106,19 @@ class User:
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
+                self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            user = response['result']['client']
+            user:list[dict] = response['result']['client']
 
             user_for_client = user.copy()
-            user_for_User: dict = user['user'].copy()
+            user_for_User: dict = user.get('user', {}).copy()
 
             for key in ['geoip','tls','user']:
                 user_for_client.pop(key, None)
@@ -121,8 +128,8 @@ class User:
 
             UserModel = dfn.User(
                 **user_for_User,
-                security_groups=user.get('user', []).get('security-groups', []),
-                channels=[dfn.UserChannel(**chans) for chans in user.get('user', None).get('channels', None)]
+                security_groups=user.get('user', {}).get('security-groups', []),
+                channels=[dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
             )
 
             userObject = dfn.Client(
@@ -141,7 +148,7 @@ class User:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def set_nick(self, nickoruid: str, newnick: str, _force: bool = False) -> bool:
+    def set_nick(self, nickoruid: str, newnick: str, force: bool = False) -> bool:
         """Sets the nick name of a user (changes the nick).
         force: if set to true then q-lines (banned nick) checks will be bypassed. And also, 
         if the new nick name already exists, the other existing user is killed and we will take that new nick.
@@ -155,16 +162,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': _force})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': force})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -185,16 +197,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -215,16 +232,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -245,16 +267,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -275,16 +302,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -305,16 +337,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -324,32 +361,37 @@ class User:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def set_oper(self, nickoruid: str, oper_account:str, oper_class: str, _class: str = '', _modes: str = '', _snomask: str = '', _vhost: str = '') -> bool:
+    def set_oper(self, nickoruid: str, oper_account:str, oper_class: str, class_: str = '', modes: str = '', snomask: str = '', vhost: str = '') -> bool:
         """Make user an IRC operator.
 
         Args:
             nickoruid (str): the nick name or the UID
             oper_account (str):  the oper account, to be shown in WHOIS to fellow ircops and in logs.
             oper_class (str):  the operclass. Usually one of the default operclasses like netadmin-with-override
-            _class (str, optional): the class to put the user in. If this option is not specified then opers is assumed, since this class exists in most unrealircd.conf's. You can specify "" (empty) if you don't want to put the user in a class. Defaults to ''.
-            _modes (str, optional): user modes to set on oper. For example: +xws. If this option is not specified then set::modes-on-oper is used. You can specify "" (empty) if you don't want to set any additional modes on the user. Defaults to ''.
-            _snomask (str, optional): snomask to set on oper. For example: +bBcdfkqsSoO. If this option is not specified then set::snomask-on-oper is used. You can specify "" (empty) if you don't want to set any snomasks on the user. Defaults to ''.
-            _vhost (str, optional): virtual host to set on oper. Defaults to ''.
+            class_ (str, optional): the class to put the user in. If this option is not specified then opers is assumed, since this class exists in most unrealircd.conf's. You can specify "" (empty) if you don't want to put the user in a class. Defaults to ''.
+            modes (str, optional): user modes to set on oper. For example: +xws. If this option is not specified then set::modes-on-oper is used. You can specify "" (empty) if you don't want to set any additional modes on the user. Defaults to ''.
+            snomask (str, optional): snomask to set on oper. For example: +bBcdfkqsSoO. If this option is not specified then set::snomask-on-oper is used. You can specify "" (empty) if you don't want to set any snomasks on the user. Defaults to ''.
+            vhost (str, optional): virtual host to set on oper. Defaults to ''.
 
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': _class, 'modes': _modes, 'snomask': _snomask, 'vhost': _vhost})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': class_, 'modes': modes, 'snomask': snomask, 'vhost': vhost})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -359,7 +401,7 @@ class User:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def join(self, nickoruid: str, channel:str, _key: str = '', _force: bool = False) -> bool:
+    def join(self, nickoruid: str, channel:str, key: str = '', force: bool = False) -> bool:
         """Join a user to a channel.
 
         Note: If force is set to true then the user will walk through bans, modes and other restrictions 
@@ -369,23 +411,28 @@ class User:
         Args:
             nickoruid (str): the nick name or the UID
             channel (str): the channel(s) to join (e.g. #channel or #channel1,#channel2)
-            _key (str, optional): the key of the channel(s) (only for channels with +k needed, again separate by colon for multiple channels). Defaults to ''.
-            _force (bool, optional): whether to bypass join restrictions or not. Defaults to False.
+            key (str, optional): the key of the channel(s) (only for channels with +k needed, again separate by colon for multiple channels). Defaults to ''.
+            force (bool, optional): whether to bypass join restrictions or not. Defaults to False.
 
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': _key, 'force': _force})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': key, 'force': force})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.set_error(**response["error"])
                 return False
 
             return True
@@ -395,7 +442,7 @@ class User:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def part(self, nickoruid: str, channel:str, _force: bool = False) -> bool:
+    def part(self, nickoruid: str, channel:str, force: bool = False) -> bool:
         """Part a user from a channel.
 
         Note: If force is set to true then the user will see a notice that they were forcefully PARTed from the channel(s). 
@@ -404,22 +451,27 @@ class User:
         Args:
             nickoruid (str): the nick name or the UID
             channel (str): the channel(s) to join (e.g. #channel or #channel1,#channel2)
-            _force (bool, optional): whether to bypass join restrictions or not. Defaults to False.
+            force (bool, optional): whether to bypass join restrictions or not. Defaults to False.
 
         Returns:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': _force})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': force})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -443,16 +495,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
@@ -477,16 +534,21 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
