@@ -2,25 +2,11 @@ from types import SimpleNamespace
 from typing import Union
 from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class Server_ban:
 
-    @dataclass
-    class ModelServerBan:
-        type: str
-        type_string: str
-        set_by: str
-        set_at: str
-        expire_at: str
-        set_at_string: str
-        expire_at_string: str
-        duration_string: str
-        set_at_delta: int
-        set_in_config: bool
-        name: str
-        reason: str
-
-    DB_SERVERS_BANS: list[ModelServerBan] = []
+    DB_SERVERS_BANS: list[dfn.ServerBan] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -36,57 +22,46 @@ class Server_ban:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelServerBan], None]:
+    def list_(self) -> list[dfn.ServerBan]:
         """List server bans (LINEs).
 
         Returns:
-            list[ModelServerBan]: List of ModelServerBan, None if nothing see the Error property
+            list[ServerBan]: List of ServerBan, if empty see Error Object
         """
         try:
+            self.Connection.EngineError.init_error()
             self.DB_SERVERS_BANS = []
+
             response = self.Connection.query(method='server_ban.list')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return self.DB_SERVERS_BANS
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return self.DB_SERVERS_BANS
 
             srvbans = response['result']['list']
 
             for srvban in srvbans:
-                self.DB_SERVERS_BANS.append(
-                        self.ModelServerBan(
-                            type=srvban['type'] if 'type' in srvban else None,
-                            type_string=srvban['type_string'] if 'type_string' in srvban else None,
-                            set_by=srvban['set_by'] if 'set_by' in srvban else None,
-                            set_at=srvban['set_at'] if 'set_at' in srvban else None,
-                            expire_at=srvban['expire_at'] if 'expire_at' in srvban else None,
-                            set_at_string=srvban['set_at_string'] if 'set_at_string' in srvban else None,
-                            expire_at_string=srvban['expire_at_string'] if 'expire_at_string' in srvban else None,
-                            duration_string=srvban['duration_string'] if 'duration_string' in srvban else None,
-                            set_at_delta=srvban['set_at_delta'] if 'set_at_delta' in srvban else 0,
-                            set_in_config=srvban['set_in_config'] if 'set_in_config' in srvban else None,
-                            name=srvban['name'] if 'name' in srvban else None,
-                            reason=srvban['reason'] if 'reason' in srvban else None
-                        )
-                )
+                self.DB_SERVERS_BANS.append(dfn.ServerBan(**srvban))
 
             return self.DB_SERVERS_BANS
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return self.DB_SERVERS_BANS
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return self.DB_SERVERS_BANS
 
-    def get(self, type: str, name: str) -> Union[ModelServerBan, None]:
+    def get(self, type: str, name: str) -> Union[dfn.ServerBan, None]:
         """Retrieve all details of a single server ban (LINE).
 
         Args:
@@ -94,49 +69,40 @@ class Server_ban:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
 
         Returns:
-            ModelServerBan (ModelServerBan): The model Object | None if nothing happen see Error property
+            ServerBan (ServerBan): The model Object | If None see the Error Attribut
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
+                self.Connection.EngineError.set_error(**response["error"])
                 return None
 
             srvban = response['result']['tkl']
 
-            objectChannel = self.ModelServerBan(
-                            type=srvban['type'] if 'type' in srvban else None,
-                            type_string=srvban['type_string'] if 'type_string' in srvban else None,
-                            set_by=srvban['set_by'] if 'set_by' in srvban else None,
-                            set_at=srvban['set_at'] if 'set_at' in srvban else None,
-                            expire_at=srvban['expire_at'] if 'expire_at' in srvban else None,
-                            set_at_string=srvban['set_at_string'] if 'set_at_string' in srvban else None,
-                            expire_at_string=srvban['expire_at_string'] if 'expire_at_string' in srvban else None,
-                            duration_string=srvban['duration_string'] if 'duration_string' in srvban else None,
-                            set_at_delta=srvban['set_at_delta'] if 'set_at_delta' in srvban else 0,
-                            set_in_config=srvban['set_in_config'] if 'set_in_config' in srvban else None,
-                            name=srvban['name'] if 'name' in srvban else None,
-                            reason=srvban['reason'] if 'reason' in srvban else None
-                        )
+            objectServerBan = dfn.ServerBan(**srvban)
 
-            return objectChannel
+            return objectServerBan
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return None
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return None
 
-    def add(self, type: str, name: str, reason: str, expire_at: str, duration_sting: str, _set_by: str = None) -> bool:
+    def add(self, type: str, name: str, reason: str, expire_at: str, duration_sting: str, set_by: str = None) -> bool:
         """Add a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -149,22 +115,27 @@ class Server_ban:
             reason (str): The reason of the ban
             expire_at (str): Date/Time when the server ban will expire. NULL means: never.
             duration_sting (str): How long the ban will last from this point in time (human printable). Uses "permanent" for forever.
-            _set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
+            set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
 
         Returns:
             bool: True if success
         """
         try:
-            response = self.Connection.query(method='server_ban.add', param={"type": type, "name": name, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': _set_by})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query(method='server_ban.add', param={"type": type, "name": name, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': set_by})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:
@@ -179,7 +150,7 @@ class Server_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def del_(self, type: str, name: str, _set_by: str = None) -> bool:
+    def del_(self, type: str, name: str, set_by: str = None) -> bool:
         """Delete a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -189,22 +160,27 @@ class Server_ban:
         Args:
             type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
-            _set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
+            set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
 
         Returns:
             bool: True if success
         """
         try:
-            response = self.Connection.query(method='server_ban.del', param={"type": type, "name": name, 'set_by': _set_by})
+            self.Connection.EngineError.init_error()
+
+            response = self.Connection.query(method='server_ban.del', param={"type": type, "name": name, 'set_by': set_by})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:
