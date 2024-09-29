@@ -3,14 +3,9 @@ import json, socket, os
 import time, logging, random, asyncio
 from typing import Literal, Union
 from types import SimpleNamespace
-from dataclasses import dataclass
+from unrealircd_rpc_py.EngineError import EngineError
 
 class Live:
-
-    @dataclass
-    class ErrorModel:
-        code: int
-        message: str
 
     def __init__(self, path_to_socket_file: str, callback_object_instance: object, callback_method_name: str, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
 
@@ -18,12 +13,17 @@ class Live:
         self.Logs: logging
         self.__init_log_system()
 
-        self.Error = self.ErrorModel(0, '')
+        self.EngineError = EngineError()
+        """Engine Error: should be used to set errors"""
+        self.Error = self.EngineError.Error
+        """Error attribut: to be used to print errors"""
 
         if not self.__check_unix_socket_file(path_to_socket_file=path_to_socket_file):
             self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
-            self.Error.code = -1
-            self.Error.message = 'The socket file is not available, please check the full path of your socket file'
+            self.EngineError.set_error(
+                code=-1,
+                message='The socket file is not available, please check the full path of your socket file'
+                )
             return None
 
         self.to_run = getattr(callback_object_instance, callback_method_name)
@@ -65,6 +65,8 @@ class Live:
 
     async def __send_to_permanent_unixsocket(self):
         try:
+            self.json_response = None
+            self.json_response_np: SimpleNamespace = None
 
             sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
             sock.connect(self.path_to_socket_file)
@@ -160,8 +162,8 @@ class Live:
 
         await asyncio.gather(self.__send_to_permanent_unixsocket())
 
-        if self.json_response == '':
-            return False
+        if self.json_response == '' or self.json_response is None:
+            return None
 
         return self.json_response
 
