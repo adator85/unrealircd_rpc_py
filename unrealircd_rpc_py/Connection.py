@@ -373,3 +373,19 @@ class Connection:
             return None
 
         return self.json_response
+
+    def get_keys_levels(self, data: any, prefix='') -> dict:
+        """Parse the Json output and list all available keys
+        """
+
+        if isinstance(data, dict):
+            for key, value in data.items():
+                complete_key = f"{prefix}.{key}" if prefix else key
+                print(f"Key : {complete_key}, Type : {type(value).__name__}")
+                self.get_keys_levels(value, complete_key)
+
+        elif isinstance(data, list):
+            for index, element in enumerate(data):
+                complete_key = f"{prefix}[{index}]"
+                print(f"Key : {complete_key}, Type : list")
+                self.get_keys_levels(element, complete_key)

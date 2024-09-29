@@ -17,13 +17,26 @@ class Geoip:
     asn: str = None
     asname: str = None
 
+#################
+#   User Class  #
+#################
+
 @dataclass
 class UserChannel:
+    """User Class
+    """
     name: str = None
     level: str = None
 
 @dataclass
 class User:
+    """User Class
+    
+    Depends on:
+        ```
+        1- UserChannel
+        ```
+    """
     username: str = None
     realname: str = None
     vhost: str = None
@@ -40,6 +53,15 @@ class User:
 
 @dataclass
 class Client:
+    """User Class
+    
+    Depends on:
+        ```
+        1- Geoip
+        2- Tls
+        3- User
+        ```
+    """
     name: str = None
     id: str = None
     hostname: str = None
@@ -53,8 +75,15 @@ class Client:
     tls: Tls = field(default_factory=Tls)
     user: User = field(default_factory=User)
 
+
+#################
+# Server Class #
+#################
+
 @dataclass
 class ServerModule:
+    """Server Class (.module_list)
+    """
     name: str = None
     version: str = None
     author: str = None
@@ -65,6 +94,8 @@ class ServerModule:
 
 @dataclass
 class ServerRehashClient:
+    """Server Class (.rehash)
+    """
     name: str = None
     id: str = None
     hostname: str = None
@@ -76,12 +107,21 @@ class ServerRehashClient:
 
 @dataclass
 class ServerRehashLogSource:
+    """Server Class (.rehash)
+    """
     file: str = None
     line: int = 0
     function: str = None
 
 @dataclass
 class ServerRehashLog:
+    """Server Class (.rehash)
+    
+    Depends on:
+        ```
+        1- ServerRehashLogSource
+        ```
+    """
     timestamp: str = None
     level: str = None
     subsystem: str = None
@@ -92,6 +132,14 @@ class ServerRehashLog:
 
 @dataclass
 class ServerRehash:
+    """Server Class (.rehash)
+    
+    Depends on:
+        ```
+        1- ServerRehashClient
+        2- ServerRehashLog
+        ```
+    """
     rehash_client: ServerRehashClient = field(default_factory=ServerRehashClient)
     log: list[ServerRehashLog] = field(default_factory=list[ServerRehashLog])
     success: str = None
@@ -103,6 +151,13 @@ class ServerRpcModules:
 
 @dataclass
 class ServerFeatures:
+    """Server Class
+    
+    Depends on:
+        ```
+        1- ServerRpcModules
+        ```
+    """
     software: str = None
     protocol: int = 0
     usermodes: str = None
@@ -112,6 +167,13 @@ class ServerFeatures:
 
 @dataclass
 class Server:
+    """Server Class
+    
+    Depends on:
+        ```
+        1- ServerFeatures
+        ```
+    """
     info: str = None
     uplink: str = None
     num_users: int = 0
@@ -122,6 +184,14 @@ class Server:
 
 @dataclass
 class ClientServer:
+    """Server Class
+    
+    Depends on:
+        ```
+        1- Server
+        2- Tls
+        ```
+    """
     name: str = None
     id: str = None
     hostname: str = None
@@ -134,26 +204,42 @@ class ClientServer:
     server: Server = field(default_factory=Server)
     tls: Tls = field(default_factory=Tls)
 
+#################
+# Channel Class #
+#################
 @dataclass
 class ChannelBans:
+    """Channel Class 
+    """
     name: str = None
     set_by: str = None
     set_at: str = None
 
 @dataclass
 class ChannelBanExemptions:
+    """Channel Class 
+    """
     name: str = None
     set_by: str = None
     set_at: str = None
 
 @dataclass
 class ChannelInviteExceptions:
+    """Channel Class 
+    """
     name: str = None
     set_by: str = None
     set_at: str = None
 
 @dataclass
 class ChannelMembers:
+    """Channel Class 
+    
+    Depends on:
+        ```
+        1- Geoip
+        ```
+    """
     level: str = None
     name: str = None
     id: str = None
@@ -164,6 +250,16 @@ class ChannelMembers:
 
 @dataclass
 class Channel:
+    """Channel Class 
+    
+    Depends on:
+        ```
+        1- ChannelBans
+        2- ChannelBanExemptions
+        3- ChannelInviteExceptions
+        4- ChannelMembers
+        ```
+    """
     name: str = None
     creation_time: str = None
     num_users: int = 0
@@ -178,6 +274,7 @@ class Channel:
 
 @dataclass
 class NameBan:
+    """Name Ban class"""
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -193,6 +290,7 @@ class NameBan:
 
 @dataclass
 class ServerBan:
+    """Server Ban class"""
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -208,6 +306,7 @@ class ServerBan:
 
 @dataclass
 class ServerBanException:
+    """Server Ban Exception class"""
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -224,6 +323,7 @@ class ServerBanException:
 
 @dataclass
 class Spamfilter:
+    """Spamfilters class"""
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -246,6 +346,73 @@ class Spamfilter:
 
 @dataclass
 class RpcInfo:
+    """Rpc Class"""
     name: str = None
     module: str = None
     version: str = None
+
+#################
+# Stats Class #
+#################
+
+@dataclass
+class StatsServer:
+    """Stats Class
+    """
+    total: int = 0
+    ulined: int = 0
+
+@dataclass
+class StatsUserCountries:
+    """Stats Class
+    """
+    country: str = None
+    count: int = 0
+
+@dataclass
+class StatsUser:
+    """Stats Class 
+    
+    Depends on:
+        ```
+        1- StatsUserCountries
+        ```
+    """
+    total: int = 0
+    ulined: int = 0
+    oper: int = 0
+    record: int = 0
+    countries: list[StatsUserCountries] = field(default_factory=list[StatsUserCountries])
+
+@dataclass
+class StatsServerBan:
+    """Stats Class
+    """
+    total: int = 0
+    server_ban: int = 0
+    spamfilter: int = 0
+    name_ban: int = 0
+    server_ban_exception: int = 0
+
+@dataclass
+class StatsChannel:
+    """Stats Class
+    """
+    total: int = 0
+
+@dataclass
+class Stats:
+    """Stats Class 
+    
+    Depends on:
+        ```
+        1- StatsServer
+        2- StatsUser
+        3- StatsChannel
+        4- StatsServerBan
+        ```
+    """
+    server: StatsServer = field(default_factory=StatsServer)
+    user: StatsUser = field(default_factory=StatsUser)
+    channel: StatsChannel = field(default_factory=StatsChannel)
+    server_ban: StatsServerBan = field(default_factory=StatsServerBan)
