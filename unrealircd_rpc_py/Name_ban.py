@@ -1,26 +1,10 @@
 from types import SimpleNamespace
-from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
+import unrealircd_rpc_py.Definition as dfn
 
 class Name_ban:
 
-    @dataclass
-    class ModelNameBan:
-        type: str
-        type_string: str
-        set_by: str
-        set_at: str
-        expire_at: str
-        set_at_string: str
-        expire_at_string: str
-        duration_string: str
-        set_at_delta: int
-        set_in_config: bool
-        name: str
-        reason: str
-
-    DB_NAME_BANS: list[ModelNameBan] = []
+    DB_NAME_BANS: list[dfn.NameBan] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -36,7 +20,7 @@ class Name_ban:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> Union[list[ModelNameBan], None]:
+    def list_(self) -> list[dfn.NameBan]:
         """List name bans (qlines).
 
         Returns:
@@ -44,39 +28,28 @@ class Name_ban:
         """
         try:
             self.DB_NAME_BANS = []
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(method='name_ban.list')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return False
 
             namebans = response['result']['list']
 
             for nameban in namebans:
                 self.DB_NAME_BANS.append(
-                        self.ModelNameBan(
-                            type=nameban['type'] if 'type' in nameban else None,
-                            type_string=nameban['type_string'] if 'type_string' in nameban else None,
-                            set_by=nameban['set_by'] if 'set_by' in nameban else None,
-                            set_at=nameban['set_at'] if 'set_at' in nameban else None,
-                            expire_at=nameban['expier_at'] if 'expier_at' in nameban else None,
-                            set_at_string=nameban['set_at_string'] if 'set_at_string' in nameban else None,
-                            expire_at_string=nameban['expier_at_string'] if 'expier_at_string' in nameban else None,
-                            duration_string=nameban['duration_string'] if 'duration_string' in nameban else None,
-                            set_at_delta=nameban['set_at_delta'] if 'set_at_delta' in nameban else 0,
-                            set_in_config=nameban['set_in_config'] if 'set_in_config' in nameban else False,
-                            name=nameban['name'] if 'name' in nameban else None,
-                            reason=nameban['reason'] if 'reason' in nameban else None
-                            )
+                        dfn.NameBan(**nameban)
                 )
 
             return self.DB_NAME_BANS
@@ -86,7 +59,7 @@ class Name_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, name: str) -> Union[ModelNameBan, None]:
+    def get(self, name: str) -> dfn.NameBan:
         """Retrieve all details of a single name ban (qline).
 
         Args:
@@ -96,37 +69,26 @@ class Name_ban:
             Union[ModelNameBan, None, bool]: The Object ModelNameBan, None if nothing see Error property
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(method='name_ban.get', param={"name": name})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
-                error = {"error": {"code": -1, "message": "Empty response"}}
-                self.Connection.set_error(error)
-                return None
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+                return False
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(response)
-                return None
+                self.Connection.EngineError.set_error(**response["error"])
+                return False
 
             nameban = response['result']['tkl']
 
-            objectNameBan = self.ModelNameBan(
-                            type=nameban['type'] if 'type' in nameban else None,
-                            type_string=nameban['type_string'] if 'type_string' in nameban else None,
-                            set_by=nameban['set_by'] if 'set_by' in nameban else None,
-                            set_at=nameban['set_at'] if 'set_at' in nameban else None,
-                            expire_at=nameban['expier_at'] if 'expier_at' in nameban else None,
-                            set_at_string=nameban['set_at_string'] if 'set_at_string' in nameban else None,
-                            expire_at_string=nameban['expier_at_string'] if 'expier_at_string' in nameban else None,
-                            duration_string=nameban['duration_string'] if 'duration_string' in nameban else None,
-                            set_at_delta=nameban['set_at_delta'] if 'set_at_delta' in nameban else 0,
-                            set_in_config=nameban['set_in_config'] if 'set_in_config' in nameban else False,
-                            name=nameban['name'] if 'name' in nameban else None,
-                            reason=nameban['reason'] if 'reason' in nameban else None
-                            )
+            objectNameBan = dfn.NameBan(**nameban)
 
             return objectNameBan
 
@@ -135,7 +97,7 @@ class Name_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def add(self, name: str, reason: str, _set_by: str = None, _expire_at: str = None, _duration_string: str = None) -> bool:
+    def add(self, name: str, reason: str, set_by: str = None, expire_at: str = None, duration_string: str = None) -> bool:
         """Add a name ban (qline).
 
         Mandatory arguments (see structure of a name ban for an explanation of the fields):
@@ -145,27 +107,32 @@ class Name_ban:
         Args:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
             reason (str): The reason of the ban
-            _set_by (str, optional): Name of the person or server who set the ban. Default to None
-            _expire_at (str, optional): Date/Time when the server ban will expire. NULL means: never. Default to None
-            _duration_string (str, optional): How long the ban will last from this point in time (human printable). Uses "permanent" for forever. Default to None
+            set_by (str, optional): Name of the person or server who set the ban. Default to None
+            expire_at (str, optional): Date/Time when the server ban will expire. NULL means: never. Default to None
+            duration_string (str, optional): How long the ban will last from this point in time (human printable). Uses "permanent" for forever. Default to None
 
         Returns:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='name_ban.add', 
-                param={"name": name, "reason": reason, "set_by": _set_by, "expire_at": _expire_at, "duration_string": _duration_string}
+                param={"name": name, "reason": reason, "set_by": set_by, "expire_at": expire_at, "duration_string": duration_string}
                 )
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:
@@ -180,30 +147,35 @@ class Name_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def del_(self, name: str, _set_by: str = None) -> bool:
+    def del_(self, name: str, set_by: str = None) -> bool:
         """Delete a name ban (LINE).
 
         Args:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
-            _set_by (str, optional): Name of the person or server who set the ban. Default to None
+            set_by (str, optional): Name of the person or server who set the ban. Default to None
 
         Returns:
             bool: True if success
         """
         try:
+            self.Connection.EngineError.init_error()
+
             response = self.Connection.query(
                 method='name_ban.del',
-                param={"name": name, 'set_by': _set_by}
+                param={"name": name, 'set_by': set_by}
                 )
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
 
             if response is None:
+                self.Logs.error('Empty response')
+                self.Connection.EngineError.set_error(code=-2, message='Empty response')
                 return False
 
             if 'error' in response:
-                self.Connection.set_error(response)
+                self.Logs.error(response['error']['message'])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             if 'result' in response:

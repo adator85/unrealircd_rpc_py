@@ -7,5 +7,4 @@ docs/*
 setup.py
 test.py
 CallbackObject.py
-unrealircd_rpc_py/Definition.py
 *.zip
