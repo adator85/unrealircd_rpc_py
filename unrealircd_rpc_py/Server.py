@@ -30,8 +30,8 @@ class Server:
         """
         try:
             self.Connection.EngineError.init_error()
-
             self.DB_SERVER = []
+
             response = self.Connection.query('server.list')
 
             self.response_raw = response
