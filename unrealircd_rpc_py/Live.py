@@ -108,15 +108,15 @@ class Live:
                             encoding='UTF-8',
                             format='%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
 
-    def subscribe(self, param: dict = {"sources": ["all"]}):
+    def subscribe(self, sources: list = ["!debug", "all"]):
         """Subscribe to the rpc server stream
         param exemple: 
         \n ["!debug","all"] would give you all log messages except for debug messages
         see: https://www.unrealircd.org/docs/List_of_all_log_messages
         Args:
-            param (dict, optional): The ressources you want to subscribe. Defaults to {"sources": ["all"]}.
+            param (list, optional): The ressources you want to subscribe. Defaults to ["!debug","all"].
         """
-        asyncio.run(self.query('log.subscribe', param=param))
+        asyncio.run(self.query('log.subscribe', param={"sources": sources}))
 
     def unsubscribe(self):
         """Run a del timer to trigger an event and then unsubscribe from the stream
