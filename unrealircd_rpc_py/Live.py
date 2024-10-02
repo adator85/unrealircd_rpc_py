@@ -76,9 +76,25 @@ class Live:
 
             sock.sendall(f'{self.request}\r\n'.encode())
 
+            # Init batch variable
+            batch = b''
+
             while self.connected:
                 # Recieve the data from the rpc server, decode it and split it
-                response = sock.recv(4096).decode().split('\n')
+                response = sock.recv(4096)
+                if response[-1:] != b"\n":
+                    # If END not recieved then fill the batch and go to next itteration
+                    batch += response
+                    continue
+                else:
+                    # The EOF is found, include current response to the batch and continue the code
+                    batch += response
+
+                # Decode and split the response
+                response = batch.decode().split("\n")
+
+                # Clean batch variable
+                batch = b''
 
                 for bdata in response:
                     if bdata:
