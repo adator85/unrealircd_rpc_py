@@ -1,7 +1,17 @@
 import json.scanner
-import requests, json, urllib3, socket, re, os
+import requests
+import json
+import urllib3
+import socket
+import re
+import os
+import base64
+import ssl
+import time
+import logging
+import random
+import traceback
 from requests.auth import HTTPBasicAuth
-import base64, ssl, time, logging, random, traceback
 from typing import Literal, Union
 from types import SimpleNamespace
 from unrealircd_rpc_py.EngineError import EngineError
@@ -238,7 +248,7 @@ class Connection:
             self.Logs.error(f'General Error: {err}')
             self.EngineError.set_error(code=-1, message=f'General Error: {err}')
 
-    def __send_request(self) :
+    def __send_request(self):
         """Use requests module"""
         try:
             self.json_response = None

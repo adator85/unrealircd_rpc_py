@@ -2,10 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name='unrealircd_rpc_py',
-    version='1.0.4',
+    version='1.0.5',
     packages=find_packages(),
     install_requires=[
-        "requests>=2.25.1"
+        "requests>=2.25.1",
+        "websockets>=13.1"
     ],
     author='adator',
     author_email='debian@deb.biz.st',
