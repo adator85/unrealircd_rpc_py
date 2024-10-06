@@ -1,6 +1,8 @@
 # UNREALIRCD-RPC-PY
 ![Static Badge](https://img.shields.io/badge/UnrealIRCd-6.2.2%20or%20later-green)
 ![Static Badge](https://img.shields.io/badge/Python3-3.10%20or%20later-green)
+![Static Badge](https://img.shields.io/badge/Requests->=2.25.1-green)
+![Static Badge](https://img.shields.io/badge/Websockets->=13.1-green)
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fadator85%2Funrealircd_rpc_py%2Fmain%2Fversion.json&query=version&label=Current%20Version)
 ![Static Badge](https://img.shields.io/badge/Maintained-Yes-green)
 
@@ -17,6 +19,7 @@ If you are using Python3, this package can help you to parse all json responses 
 
 ## How to establish the link
 ```python
+    from unrealircd_rpc_py.Loader import Loader
     # Using requests method
     rpc = Loader(
             req_method='requests',
@@ -39,17 +42,27 @@ If you are using Python3, this package can help you to parse all json responses 
             path_to_socket_file='/path/to/unrealircd/data/rpc.socket'
         )
 
+    from unrealircd_rpc_py.Live import Live
     # Live Connection (Local only)
     LiveRpc = Live(
+        req_method='unixsocket',
         path_to_socket_file='/path/to/unrealircd/data/rpc.socket',
         callback_object_instance=Callback_class_instance,
         callback_method_name='your_method_name'
     )
 
+    # Live Connection (Local Or Remote)
+    liveRpc = Live(
+        req_method='websocket',
+        url='https://your.irc.domaine.org:8600/api',
+        username='apiname',
+        password='apiPASSWORD',
+        callback_object_instance=InitCallbackClass,
+        callback_method_name='your_method_name'
+    )
+
 ```
-
 ## How to work with (remotly)
-
 This package allows easy interfacing with UnrealIRCd through regular Python3 code, such as:
 ```python
     from unrealircd_rpc_py.Loader import Loader
@@ -113,47 +126,11 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
         print(f'Members: {chan.members}')
         print(f'-' * 16)
 ```
-## How to work with (using Live unix socket)
-```python
-    from unrealircd_rpc_py.Live import Live
-
-    # This is un callback class that will recieve the response
-    from TestObject import TestObject
-
-    InitCallbackClass = TestObject()
-
-    # The Callback method must always have 1 parameter as string
-    liveRpc = Live(
-        path_to_socket_file='/path/to/unrealircd/data/rpc.socket',
-        callback_object_instance=InitCallbackClass,
-        callback_method_name='your_method_name'
-    )
-
-    # This method will run forever and will send to your callback method the response
-    # in SimpleNameSpace type that you can parse
-    liveRpc.subscribe()
-```
-
-## Exemple of a Callback Class
-```python
-    class CallbackObject:
-
-        def __init__(self) -> None:
-            pass
-
-        def run(self, json_response) -> bool:
-
-            print(json_response)
-
-            if type(json_response.result) != bool:
-                print(json_response.result.channel)
-```
-
 ## Object that you can use in a synchrone mode
 ```python
     from unrealircd_rpc_py.Loader import Loader
 
-    # Initialize your connexion to unrealircd using the unixsocket
+    # Initialize your connexion to unrealircd using one of the three method
     rpc = Loader(
             req_method='unixsocket',
             path_to_socket_file='/path/to/unrealircd/data/rpc.socket'
@@ -169,4 +146,72 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
     Whowas = rpc.Whowas
     Log = rpc.Log # This feature requires unrealIRCd 6.1.8 or higher
 
+```
+# Live Connection via unixsocket or websocket
+## How to work with (using Live unixsocket)
+```python
+    from unrealircd_rpc_py.Live import Live
+
+    # This is un callback class that will recieve the response
+    from TestObject import TestObject
+
+    InitCallbackClass = TestObject()
+
+    # The Callback method must always have 1 parameter as string
+    liveRpc = Live(req_method='unixsocket',
+        path_to_socket_file='/path/to/unrealircd/data/rpc.socket',
+        callback_object_instance=InitCallbackClass,
+        callback_method_name='your_method_name'
+    )
+
+    # This method will run forever and will send to your callback method the response
+    # in SimpleNameSpace type that you can parse
+    if liveRpc.Error.code == 0:
+        # Subscribe to live events
+        liveRpc.subscribe()
+    else:
+        # If error show the error message
+        print(liveRpc.Error.message)
+```
+## How to work with (using Live websocket)
+```python
+    from unrealircd_rpc_py.Live import Live
+
+    # This is un callback class that will recieve the response
+    from TestObject import TestObject
+
+    InitCallbackClass = TestObject()
+
+    # The Callback method must always have 1 parameter as string
+    liveRpc = Live(req_method='websocket',
+        url='https://your.irc.domaine.org:8600/api',
+        username='apiname',
+        password='apiPASSWORD',
+        callback_object_instance=InitCallbackClass,
+        callback_method_name='your_method_name'
+    )
+
+    # This method will run forever and will send to your callback method the response
+    # in SimpleNameSpace type that you can parse
+    if liveRpc.Error.code == 0:
+        # Subscribe to live events
+        liveRpc.subscribe()
+    else:
+        # If error show the error message
+        print(liveRpc.Error.message)
+```
+
+## Exemple of a Callback Class
+```python
+    class CallbackObject:
+
+        def __init__(self) -> None:
+            pass
+
+        def run(self, json_response) -> bool:
+
+            print(json_response)
+
+            if type(json_response.result) != bool:
+                print(json_response.result.channel)
 ```
