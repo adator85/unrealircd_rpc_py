@@ -1,6 +1,8 @@
 # UNREALIRCD-RPC-PY
 ![Static Badge](https://img.shields.io/badge/UnrealIRCd-6.2.2%20or%20later-green)
 ![Static Badge](https://img.shields.io/badge/Python3-3.10%20or%20later-green)
+![Static Badge](https://img.shields.io/badge/Requests->=2.25.1-green)
+![Static Badge](https://img.shields.io/badge/Websockets->=13.1-green)
 ![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fadator85%2Funrealircd_rpc_py%2Fmain%2Fversion.json&query=version&label=Current%20Version)
 ![Static Badge](https://img.shields.io/badge/Maintained-Yes-green)
 
