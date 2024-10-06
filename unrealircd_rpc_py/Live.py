@@ -1,13 +1,80 @@
 import json.scanner
-import json, socket, os
-import time, logging, random, asyncio
+import json
+import socket
+import os
+import base64
+import ssl
+import re
+import time
+import logging
+import random
+import asyncio
 from typing import Literal, Union
 from types import SimpleNamespace
+from websockets.asyncio import client
+from websockets import InvalidURI, InvalidHandshake
 from unrealircd_rpc_py.EngineError import EngineError
 
 class Live:
 
-    def __init__(self, path_to_socket_file: str, callback_object_instance: object, callback_method_name: str, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, req_method: Literal['unixsocket', 'websocket'], 
+                 callback_object_instance: object, 
+                 callback_method_name: str, 
+                 url: str = None,
+                 username: str = None,
+                 password: str = None,
+                 path_to_socket_file: str = None, 
+                 debug_level: Literal[10, 20, 30, 40, 50] = 20
+                 ) -> None:
+        """Initiate live connection to unrealircd
+
+        unixsocket:
+        ```
+        If you use unixsocket as req_method you must provide:
+            path_to_socket_file
+        ```
+
+        websocket:
+        ```
+        If you use websocket as req_method you must provide:
+            url: https://your.rpcjson.link:port/api
+            username: API_RPC_USERNAME
+            password: API_RPC_PASSWORD
+        ```
+
+        ## Exemples:
+        If you want to use unixsocket you need to provide 4 parameters:
+        ```python
+            Live(
+                req_method='unixsocket',
+                callback_object_instance=YourCallbackClass,
+                callback_method_name='your_callback_methode_name',
+                path_to_socket_file='/path/to/unrealircd/socket/your_socket.socket'
+            )
+        ```
+
+        If you want to use websocket you need to provide 5 parameters:
+        ```python
+            Live(
+                req_method='websocket',
+                callback_object_instance=YourCallbackClass,
+                callback_method_name='your_callback_methode_name',
+                url='https://your.rpcjson.link:8600/api',
+                userame='API_RPC_USERNAME',
+                password='API_RPC_PASSWORD'
+            )
+        ```
+
+        Args:
+            req_method (str): The method you want to use, 2 options are available [unixsocket | websocket]
+            callback_object_instance (object): The callback class instance (could be "self" if the class is in the same class)
+            callback_method_name (str): The callback method name
+            url (str, optional): The full url to connect https://your.rpcjson.link:port/api.
+            path_to_socket_file (str, optional): The full path to your unix socket file
+            username (str, optional): Default to None 
+            password (str, optional): Default to None 
+            debug_level (str, optional): NOTSET=0 | DEBUG=10 | INFO=20 | WARN=30 | ERROR=40 | CRITICAL=50 - Default to 20 
+        """
 
         self.debug_level = debug_level
         self.Logs: logging
@@ -18,11 +85,24 @@ class Live:
         self.Error = self.EngineError.Error
         """Error attribut: to be used to print errors"""
 
-        if not self.__check_unix_socket_file(path_to_socket_file=path_to_socket_file):
+        self.req_method = req_method
+        self.url = url
+        self.username = username
+        self.password = password
+
+        if req_method == 'unixsocket' and not self.__check_unix_socket_file(path_to_socket_file):
             self.Logs.critical(f'The socket file is not available, please check the full path of your socket file')
             self.EngineError.set_error(
                 code=-1,
                 message='The socket file is not available, please check the full path of your socket file'
+                )
+            return None
+
+        if req_method == 'websocket' and not self.__check_url(url):
+            self.Logs.critical(f'You must provide the url in this format: https://your.rpcjson.link:port/api')
+            self.EngineError.set_error(
+                code=-1,
+                message='You must provide the url in this format: https://your.rpcjson.link:port/api'
                 )
             return None
 
@@ -58,6 +138,40 @@ class Live:
                 return response
 
             response = True
+
+            return response
+        except NameError as nameerr:
+            self.Logs.critical(f'NameError: {nameerr}')
+
+    def __check_url(self, url: str) -> bool:
+        """Check provided url if it follow the format
+
+        Args:
+            url (str): Url to jsonrpc https://your.rpcjson.link:port/api
+
+        Returns:
+            bool: True if url is correct else False
+        """
+        try:
+            response = False
+
+            if url is None:
+                return response
+
+            pattern = r'https?://([a-zA-Z0-9\.-]+):(\d+)/(.+)'
+
+            match = re.match(pattern, url)
+
+            if not match is None:
+                self.host = match.group(1)
+                self.port = match.group(2)
+                self.endpoint = match.group(3)
+                response = True
+            else:
+                self.EngineError.set_error(
+                    code=-1,
+                    message='You must provide the url in this format: https://your.rpcjson.link:port/api'
+                )
 
             return response
         except NameError as nameerr:
@@ -114,6 +228,70 @@ class Live:
             self.Logs.critical(f'Json Decod Error: {jsondecoderror}')
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
+
+    async def __send_websocket(self):
+        """Connect using websockets"""
+        try:
+            if not self.__check_url(self.url) and not self.url is None:
+                self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
+                return None
+
+            # Build credentials
+            api_login = f'{self.username}:{self.password}'
+            credentials = base64.b64encode(api_login.encode()).decode()
+
+            # Override headers
+            headers = {
+                'Authorization' : f"Basic {credentials}"
+            }
+
+            # Create an SSL context for wss
+            sslctx = ssl.create_default_context()
+            sslctx.check_hostname = False
+            sslctx.verify_mode = ssl.CERT_NONE
+
+            ws_uri = f'wss://{self.host}:{self.port}/'
+
+            async with client.connect(uri=ws_uri, additional_headers=headers, ssl=sslctx) as ws:
+                await ws.send(self.request)
+                while self.connected:
+
+                    response = await ws.recv()
+
+                    decodedResponse = json.dumps(response)
+
+                    self.str_response = decodedResponse
+                    self.json_response = json.loads(json.loads(decodedResponse))
+                    self.json_response_np: SimpleNamespace = json.loads(response, object_hook=lambda d: SimpleNamespace(**d))
+                    self.to_run(self.json_response_np)
+
+        except KeyError as ke:
+            self.Logs.error(f"KeyError : {ke}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=ke)
+        except InvalidURI as URIError:
+            self.Logs.error(f"Invalid URI : {URIError}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'Invalid URI {URIError}')
+        except InvalidHandshake as HandshakeError:
+            self.Logs.critical(f"Handshake Error : {HandshakeError}")
+            self.Logs.critical(f"Initial request: {self.request}")
+        except json.decoder.JSONDecodeError as jsonerror:
+            self.Logs.error(f"jsonError {jsonerror}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'Json Error: {jsonerror}')
+        except TimeoutError as te:
+            self.Logs.error(f"Timeout Error {te}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'Timeout Error: {te}')
+        except OSError as oe:
+            self.Logs.error(f"OS Error {oe}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'OS Error: {oe}')
+        except Exception as err:
+            self.Logs.error(f"General Error {err}")
+            self.Logs.error(f"Initial request: {self.request}")
+            self.EngineError.set_error(code=-1, message=f'General Error: {err}')
 
     def __init_log_system(self) -> None:
         """Init log system
@@ -176,7 +354,13 @@ class Live:
 
         self.request = json.dumps(response)
 
-        await asyncio.gather(self.__send_to_permanent_unixsocket())
+        if self.req_method == 'unixsocket':
+            await asyncio.gather(self.__send_to_permanent_unixsocket())
+        elif self.req_method == 'websocket':
+            await asyncio.gather(self.__send_websocket())
+        else:
+            self.Logs.error('No valid request method')
+            self.EngineError.set_error(code=-1, message='<< Invalid Live method >>')
 
         if self.json_response == '' or self.json_response is None:
             return None
