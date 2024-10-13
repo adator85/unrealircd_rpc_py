@@ -352,7 +352,7 @@ class RpcInfo:
     version: str = None
 
 #################
-# Stats Class #
+#  Stats Class  #
 #################
 
 @dataclass
@@ -416,3 +416,33 @@ class Stats:
     user: StatsUser = field(default_factory=StatsUser)
     channel: StatsChannel = field(default_factory=StatsChannel)
     server_ban: StatsServerBan = field(default_factory=StatsServerBan)
+
+##################
+#  Whowas Class  #
+##################
+
+@dataclass
+class WhowasUser:
+    username: str = None
+    realname: str = None
+    vhost: str = None
+    servername: str = None
+
+@dataclass
+class Whowas:
+    """Whowas Class 
+    
+    Depends on:
+    ```
+    1- WhowasUser
+    ```
+    """
+    name: str = None
+    event: str = None
+    logon_time: str = None
+    logoff_time: str = None
+    hostname: str = None
+    ip: str = None
+    details: str = None
+    connected_since: str = None
+    user: WhowasUser = field(default_factory=WhowasUser)
