@@ -432,7 +432,7 @@ class User:
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
-                self.Connection.set_error(**response["error"])
+                self.Connection.EngineError.set_error(**response["error"])
                 return False
 
             return True
