@@ -329,10 +329,22 @@ class Connection:
         """Init log system
         """
         # Init logs object
-        self.Logs = logging
-        self.Logs.basicConfig(level=self.debug_level,
-                            encoding='UTF-8',
-                            format='%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
+        self.Logs: logging.Logger = logging.getLogger('unrealircd-rpc-py')
+        self.Logs.propagate = False
+        self.Logs.setLevel(self.debug_level)
+
+        # Add Handlers
+        stdout_hanlder = logging.StreamHandler()
+        stdout_hanlder.setLevel(self.debug_level)
+
+        # Define log format
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
+
+        # Apply log format
+        stdout_hanlder.setFormatter(formatter)
+
+        # Add handler to logs
+        self.Logs.addHandler(stdout_hanlder)
 
     def query(self, method: Union[Literal['stats.get', 'rpc.info','user.list'], str], param: dict = {}, id: int = 123, jsonrpc:str = '2.0') -> Union[str, any, None, bool]:
         """This method will use to run the queries
