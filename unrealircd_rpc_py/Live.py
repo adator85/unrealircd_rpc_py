@@ -297,10 +297,21 @@ class Live:
         """Init log system
         """
         # Init logs object
-        self.Logs = logging
-        self.Logs.basicConfig(level=self.debug_level,
-                            encoding='UTF-8',
-                            format='%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
+        self.Logs: logging.Logger = logging.getLogger('unrealircd-liverpc-py')
+        self.Logs.setLevel(self.debug_level)
+
+        # Add Handlers
+        stdout_hanlder = logging.StreamHandler()
+        stdout_hanlder.setLevel(self.debug_level)
+
+        # Define log format
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s - %(lineno)d - %(funcName)s - %(message)s')
+
+        # Apply log format
+        stdout_hanlder.setFormatter(formatter)
+
+        # Add handler to logs
+        self.Logs.addHandler(stdout_hanlder)
 
     def subscribe(self, sources: list = ["!debug", "all"]):
         """Subscribe to the rpc server stream
