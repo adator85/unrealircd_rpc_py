@@ -1,13 +1,13 @@
 from types import SimpleNamespace
 from typing import Union
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Spamfilter:
 
-    DB_SPAMFILTERS: list[dfn.Spamfilter] = []
+    DB_SPAMFILTERS: list[Dfn.Spamfilter] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -17,11 +17,15 @@ class Spamfilter:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def list_(self) -> list[dfn.Spamfilter]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self) -> list[Dfn.Spamfilter]:
         """List spamfilters.
 
         Returns:
@@ -49,7 +53,7 @@ class Spamfilter:
             spamfilters = response['result']['list']
 
             for spamfilter in spamfilters:
-                self.DB_SPAMFILTERS.append(dfn.Spamfilter(**spamfilter))
+                self.DB_SPAMFILTERS.append(Dfn.Spamfilter(**spamfilter))
 
             return self.DB_SPAMFILTERS
 
@@ -60,7 +64,7 @@ class Spamfilter:
             self.Logs.error(f'General error: {err}')
             return self.DB_SPAMFILTERS
 
-    def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[dfn.Spamfilter, None]:
+    def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[Dfn.Spamfilter, None]:
         """Retrieve all details of a single spamfilter.
 
         Mandatory arguments (see structure of a spamfilter for an explanation of the fields):
@@ -96,7 +100,7 @@ class Spamfilter:
 
             spamfilter = response['result']['tkl']
 
-            objectSpamfilter = dfn.Spamfilter(**spamfilter)
+            objectSpamfilter = Dfn.Spamfilter(**spamfilter)
 
             return objectSpamfilter
 

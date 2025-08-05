@@ -1,12 +1,11 @@
 from types import SimpleNamespace
 from typing import Union
-from dataclasses import dataclass
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Server_ban:
 
-    DB_SERVERS_BANS: list[dfn.ServerBan] = []
+    DB_SERVERS_BANS: list[Dfn.ServerBan] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -22,7 +21,11 @@ class Server_ban:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> list[dfn.ServerBan]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self) -> list[Dfn.ServerBan]:
         """List server bans (LINEs).
 
         Returns:
@@ -32,7 +35,7 @@ class Server_ban:
             self.Connection.EngineError.init_error()
             self.DB_SERVERS_BANS = []
 
-            response = self.Connection.query(method='server_ban.list')
+            response:dict[str, dict] = self.Connection.query(method='server_ban.list')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -47,10 +50,10 @@ class Server_ban:
                 self.Connection.EngineError.set_error(**response["error"])
                 return self.DB_SERVERS_BANS
 
-            srvbans = response['result']['list']
+            srvbans:list[dict] = response.get('result', {}).get('list', [])
 
             for srvban in srvbans:
-                self.DB_SERVERS_BANS.append(dfn.ServerBan(**srvban))
+                self.DB_SERVERS_BANS.append(Dfn.ServerBan(**srvban))
 
             return self.DB_SERVERS_BANS
 
@@ -61,7 +64,7 @@ class Server_ban:
             self.Logs.error(f'General error: {err}')
             return self.DB_SERVERS_BANS
 
-    def get(self, type: str, name: str) -> Union[dfn.ServerBan, None]:
+    def get(self, type: str, name: str) -> Union[Dfn.ServerBan, None]:
         """Retrieve all details of a single server ban (LINE).
 
         Args:
@@ -74,7 +77,7 @@ class Server_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
+            response:dict[str, dict] = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -89,9 +92,9 @@ class Server_ban:
                 self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            srvban = response['result']['tkl']
+            srvban: dict = response.get('result', {}).get('tkl', {})
 
-            objectServerBan = dfn.ServerBan(**srvban)
+            objectServerBan = Dfn.ServerBan(**srvban)
 
             return objectServerBan
 

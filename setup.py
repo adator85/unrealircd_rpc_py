@@ -10,7 +10,7 @@ setup(
     ],
     author='adator',
     author_email='debian@deb.biz.st',
-    description='Python library for unrealIRCD json-rpc',
+    description='Python library for UnrealIRCd json-rpc',
     long_description=open('README.MD').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/adator85/unrealircd_rpc_py',

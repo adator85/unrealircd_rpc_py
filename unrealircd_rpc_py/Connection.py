@@ -1,4 +1,4 @@
-import json.scanner
+# import json.scanner
 import requests
 import json
 import urllib3
@@ -12,7 +12,7 @@ import logging
 import random
 import traceback
 from requests.auth import HTTPBasicAuth
-from typing import Literal, Union
+from typing import Literal, Union, Optional
 from types import SimpleNamespace
 from unrealircd_rpc_py.EngineError import EngineError
 
@@ -29,10 +29,10 @@ class Connection:
         self.Error = self.EngineError.Error
         """Error attribut: to be used to print errors"""
 
-        self.url = url
+        self.url: str = url
         self.path_to_socket_file = path_to_socket_file
 
-        self.endpoint: str = None
+        self.endpoint: Optional[str] = None
         self.host: str = None
         self.port: int = 0
         self.username = username
@@ -80,6 +80,7 @@ class Connection:
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
+            return False
 
     def __check_unix_socket_file(self, path_to_socket_file: str) -> bool:
         """Check provided full path to socket file if it exist
@@ -179,13 +180,13 @@ class Connection:
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
-            self.EngineError.set_error(code=-1, message=attrerr)
+            self.EngineError.set_error(code=-1, message=attrerr.__str__())
         except OSError as oserr:
             self.Logs.critical(f'System Error: {oserr}')
-            self.EngineError.set_error(code=-1, message=oserr)
+            self.EngineError.set_error(code=-1, message=oserr.__str__())
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
-            self.EngineError.set_error(code=-1, message=err)
+            self.EngineError.set_error(code=-1, message=err.__str__())
 
     def __send_srequest(self):
         """S For socket connection"""
@@ -274,16 +275,16 @@ class Connection:
             if self.__is_error_connection(response.text):
                 return None
 
-            decodedResponse = json.dumps(response.text)
+            decoded_response = json.dumps(response.text)
 
-            self.str_response = decodedResponse
-            self.json_response = json.loads(json.loads(decodedResponse))
+            self.str_response = decoded_response
+            self.json_response = json.loads(json.loads(decoded_response))
             self.json_response_np: SimpleNamespace = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
 
         except KeyError as ke:
             self.Logs.error(f"KeyError : {ke}")
             self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=ke)
+            self.EngineError.set_error(code=-1, message=ke.__str__())
         except requests.ReadTimeout as rt:
             self.Logs.error(f"Timeout : {rt}")
             self.Logs.error(f"Initial request: {self.request}")
@@ -396,7 +397,7 @@ class Connection:
 
         return self.json_response
 
-    def get_keys_levels(self, data: any, prefix='') -> dict:
+    def get_keys_levels(self, data: any, prefix=''):
         """Parse the Json output and list all available keys
         """
 

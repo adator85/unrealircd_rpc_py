@@ -1,18 +1,52 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict, fields
+from json import dumps
+from typing import Any
+from warnings import warn
+from functools import wraps
+
+def deprecated(reason: str = "Deprecated"):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            warn(
+                f"{func.__name__}() deprecated : {reason}",
+                category=DeprecationWarning,
+                stacklevel=2
+            )
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 @dataclass
-class RPCError:
+class MainModel:
+    """Parent Model contains important methods"""
+    def to_dict(self) -> dict[str, Any]:
+        """Return the fields of a dataclass instance as a new dictionary mapping field names to field values."""
+        return asdict(self)
+    
+    def to_json(self) -> str:
+        """Return the object of a dataclass a json str."""
+        return dumps(self.to_dict())
+
+    def get_attributes(self) -> list[str]:
+        """Return a list of attributes name"""
+        return [f.name for f in fields(self)]
+
+
+@dataclass
+class RPCError(MainModel):
     """This model will contain the error if any"""
     code: int = 0
     message: str = None
 
+
 @dataclass
-class Tls:
+class Tls(MainModel):
     certfp: str = None
     cipher: str = None
 
 @dataclass
-class Geoip:
+class Geoip(MainModel):
     country_code: str = None
     asn: str = None
     asname: str = None
@@ -22,14 +56,14 @@ class Geoip:
 #################
 
 @dataclass
-class UserChannel:
+class UserChannel(MainModel):
     """User Class
     """
     name: str = None
     level: str = None
 
 @dataclass
-class User:
+class User(MainModel):
     """User Class
     
     Depends on:
@@ -52,7 +86,7 @@ class User:
     channels: list[UserChannel] = field(default_factory=list[UserChannel])
 
 @dataclass
-class Client:
+class Client(MainModel):
     """User Class
     
     Depends on:
@@ -81,7 +115,7 @@ class Client:
 #################
 
 @dataclass
-class ServerModule:
+class ServerModule(MainModel):
     """Server Class (.module_list)
     """
     name: str = None
@@ -93,7 +127,7 @@ class ServerModule:
     permanent_but_reloadable: bool = False
 
 @dataclass
-class ServerRehashClient:
+class ServerRehashClient(MainModel):
     """Server Class (.rehash)
     """
     name: str = None
@@ -106,7 +140,7 @@ class ServerRehashClient:
     idle_since: str = None
 
 @dataclass
-class ServerRehashLogSource:
+class ServerRehashLogSource(MainModel):
     """Server Class (.rehash)
     """
     file: str = None
@@ -114,7 +148,7 @@ class ServerRehashLogSource:
     function: str = None
 
 @dataclass
-class ServerRehashLog:
+class ServerRehashLog(MainModel):
     """Server Class (.rehash)
     
     Depends on:
@@ -131,7 +165,7 @@ class ServerRehashLog:
     source: ServerRehashLogSource = field(default_factory=ServerRehashLogSource)
 
 @dataclass
-class ServerRehash:
+class ServerRehash(MainModel):
     """Server Class (.rehash)
     
     Depends on:
@@ -145,12 +179,12 @@ class ServerRehash:
     success: str = None
 
 @dataclass
-class ServerRpcModules:
+class ServerRpcModules(MainModel):
     name: str = None
     version: str = None
 
 @dataclass
-class ServerFeatures:
+class ServerFeatures(MainModel):
     """Server Class
     
     Depends on:
@@ -166,7 +200,7 @@ class ServerFeatures:
     rpc_modules: list[ServerRpcModules] = field(default_factory=list[ServerRpcModules])
 
 @dataclass
-class Server:
+class Server(MainModel):
     """Server Class
     
     Depends on:
@@ -183,7 +217,7 @@ class Server:
     features: ServerFeatures = field(default_factory=ServerFeatures)
 
 @dataclass
-class ClientServer:
+class ClientServer(MainModel):
     """Server Class
     
     Depends on:
@@ -208,7 +242,7 @@ class ClientServer:
 # Channel Class #
 #################
 @dataclass
-class ChannelBans:
+class ChannelBans(MainModel):
     """Channel Class 
     """
     name: str = None
@@ -216,7 +250,7 @@ class ChannelBans:
     set_at: str = None
 
 @dataclass
-class ChannelBanExemptions:
+class ChannelBanExemptions(MainModel):
     """Channel Class 
     """
     name: str = None
@@ -224,7 +258,7 @@ class ChannelBanExemptions:
     set_at: str = None
 
 @dataclass
-class ChannelInviteExceptions:
+class ChannelInviteExceptions(MainModel):
     """Channel Class 
     """
     name: str = None
@@ -232,7 +266,7 @@ class ChannelInviteExceptions:
     set_at: str = None
 
 @dataclass
-class ChannelMembers:
+class ChannelMembers(MainModel):
     """Channel Class 
     
     Depends on:
@@ -246,10 +280,16 @@ class ChannelMembers:
     hostname: str = None
     ip: str = None
     details: str = None
+    server_port: int = 0
+    client_port: int = 0
+    connected_since: str = None
+    idle_since: str = None
+    user: User = field(default_factory=User)
     geoip: Geoip = field(default_factory=Geoip)
+    tls: Tls = field(default_factory=Tls)
 
 @dataclass
-class Channel:
+class Channel(MainModel):
     """Channel Class 
     
     Depends on:
@@ -273,7 +313,7 @@ class Channel:
     members: list[ChannelMembers] = field(default_factory=list[ChannelMembers])
 
 @dataclass
-class NameBan:
+class NameBan(MainModel):
     """Name Ban class"""
     type: str = None
     type_string: str = None
@@ -289,7 +329,7 @@ class NameBan:
     reason: str = None
 
 @dataclass
-class ServerBan:
+class ServerBan(MainModel):
     """Server Ban class"""
     type: str = None
     type_string: str = None
@@ -305,7 +345,7 @@ class ServerBan:
     reason: str = None
 
 @dataclass
-class ServerBanException:
+class ServerBanException(MainModel):
     """Server Ban Exception class"""
     type: str = None
     type_string: str = None
@@ -322,7 +362,7 @@ class ServerBanException:
     exception_types: str = None
 
 @dataclass
-class Spamfilter:
+class Spamfilter(MainModel):
     """Spamfilters class"""
     type: str = None
     type_string: str = None
@@ -345,7 +385,7 @@ class Spamfilter:
     hits_except: int = 0
 
 @dataclass
-class RpcInfo:
+class RpcInfo(MainModel):
     """Rpc Class"""
     name: str = None
     module: str = None
@@ -356,21 +396,21 @@ class RpcInfo:
 #################
 
 @dataclass
-class StatsServer:
+class StatsServer(MainModel):
     """Stats Class
     """
     total: int = 0
     ulined: int = 0
 
 @dataclass
-class StatsUserCountries:
+class StatsUserCountries(MainModel):
     """Stats Class
     """
     country: str = None
     count: int = 0
 
 @dataclass
-class StatsUser:
+class StatsUser(MainModel):
     """Stats Class 
     
     Depends on:
@@ -385,7 +425,7 @@ class StatsUser:
     countries: list[StatsUserCountries] = field(default_factory=list[StatsUserCountries])
 
 @dataclass
-class StatsServerBan:
+class StatsServerBan(MainModel):
     """Stats Class
     """
     total: int = 0
@@ -395,13 +435,13 @@ class StatsServerBan:
     server_ban_exception: int = 0
 
 @dataclass
-class StatsChannel:
+class StatsChannel(MainModel):
     """Stats Class
     """
     total: int = 0
 
 @dataclass
-class Stats:
+class Stats(MainModel):
     """Stats Class 
     
     Depends on:
@@ -422,19 +462,21 @@ class Stats:
 ##################
 
 @dataclass
-class WhowasUser:
+class WhowasUser(MainModel):
     username: str = None
     realname: str = None
     vhost: str = None
     servername: str = None
+    account: str = None
 
 @dataclass
-class Whowas:
+class Whowas(MainModel):
     """Whowas Class 
     
     Depends on:
     ```
     1- WhowasUser
+    2- Geoip
     ```
     """
     name: str = None
@@ -446,3 +488,4 @@ class Whowas:
     details: str = None
     connected_since: str = None
     user: WhowasUser = field(default_factory=WhowasUser)
+    geoip: Geoip = field(default_factory=Geoip)
