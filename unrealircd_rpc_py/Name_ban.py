@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Name_ban:
 
-    DB_NAME_BANS: list[dfn.NameBan] = []
+    DB_NAME_BANS: list[Dfn.NameBan] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -16,11 +16,15 @@ class Name_ban:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def list_(self) -> list[dfn.NameBan]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self) -> list[Dfn.NameBan]:
         """List name bans (qlines).
 
         Returns:
@@ -30,7 +34,7 @@ class Name_ban:
             self.DB_NAME_BANS = []
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='name_ban.list')
+            response: dict = self.Connection.query(method='name_ban.list')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -45,11 +49,11 @@ class Name_ban:
                 self.Connection.EngineError.set_error(**response["error"])
                 return False
 
-            namebans = response['result']['list']
+            namebans: dict = response.get('result', {}).get('list', []) # ['result']['list']
 
             for nameban in namebans:
                 self.DB_NAME_BANS.append(
-                        dfn.NameBan(**nameban)
+                        Dfn.NameBan(**nameban)
                 )
 
             return self.DB_NAME_BANS
@@ -59,7 +63,7 @@ class Name_ban:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def get(self, name: str) -> dfn.NameBan:
+    def get(self, name: str) -> Dfn.NameBan:
         """Retrieve all details of a single name ban (qline).
 
         Args:
@@ -88,7 +92,7 @@ class Name_ban:
 
             nameban = response['result']['tkl']
 
-            objectNameBan = dfn.NameBan(**nameban)
+            objectNameBan = Dfn.NameBan(**nameban)
 
             return objectNameBan
 

@@ -1,14 +1,13 @@
-import traceback
 from types import SimpleNamespace
-from typing import Union
+from typing import Union, Literal
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Channel:
 
-    DB_CHANNELS: list[dfn.Channel] = []
+    DB_CHANNELS: list[Dfn.Channel] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -18,11 +17,15 @@ class Channel:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def list_(self, object_detail_level: int = 1) -> list[dfn.Channel]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self, object_detail_level: Literal[0, 1, 2, 3, 4] = 1) -> list[Dfn.Channel]:
         """List channels.
 
         if you want to have more details increase the level or see the level you want by visiting this page:
@@ -63,12 +66,12 @@ class Channel:
                     channel_copy.pop(key, None)
 
                 self.DB_CHANNELS.append(
-                        dfn.Channel(
+                        Dfn.Channel(
                             **channel_copy,
-                            bans=[dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
-                            ban_exemptions=[dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
-                            invite_exceptions=[dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
-                            members=[dfn.ChannelMembers(**member) for member in channel.get('members', [])]
+                            bans=[Dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
+                            ban_exemptions=[Dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
+                            invite_exceptions=[Dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
+                            members=[Dfn.ChannelMembers(**member) for member in channel.get('members', [])]
                         )
                 )
 
@@ -81,7 +84,7 @@ class Channel:
             self.Logs.error(f'General error: {err}')
             return self.DB_CHANNELS
 
-    def get(self, channel: str, object_detail_level: int = 3) -> Union[dfn.Channel, None]:
+    def get(self, channel: str, object_detail_level: int = 3) -> Union[Dfn.Channel, None]:
         """Retrieve all details of a single channel. 
         This returns more information than a channel.list call, see the end of Structure of a channel.
 
@@ -95,7 +98,7 @@ class Channel:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': object_detail_level})
+            response: dict[str, dict] = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': object_detail_level})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -110,20 +113,48 @@ class Channel:
                 self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            channel: dict = response['result']['channel']
+            channel: dict = response.get('result', {}).get('channel', {})
 
             channel_copy: dict = channel.copy()
             for key in ['bans','ban_exemptions','invite_exceptions', 'members']:
-                    channel_copy.pop(key, None)
+                channel_copy.pop(key, None)
 
-            objectChannel = dfn.Channel(
+            members:list[dict] = channel.get('members', [])
+            
+            db_members: list[Dfn.ChannelMembers] = []
+
+            for member in members:
+                user_dict: dict[str, dict] = member.get('user', Dfn.User().to_dict())
+                tls_dict: dict[str, dict] = member.get('tls', Dfn.Tls().to_dict())
+                geoip_dict: dict[str, dict] = member.get('geoip', Dfn.Geoip().to_dict())
+
+                if 'security-groups' in user_dict:
+                    # rename key
+                    user_dict['security_groups'] = user_dict.pop('security-groups')
+                
+                if 'country-code' in geoip_dict:
+                    geoip_dict['country_code'] = geoip_dict.pop('country-code')
+
+                for key in ['user', 'tls', 'geoip']:
+                    member.pop(key, None)
+                
+                user_obj = Dfn.User(**user_dict)
+                tls_obj = Dfn.Tls(**tls_dict)
+                geoip_obj = Dfn.Geoip(**geoip_dict)
+
+                member_obj = Dfn.ChannelMembers(**member, user=user_obj, tls=tls_obj, geoip=geoip_obj)
+
+                db_members.append(member_obj)
+
+            objectChannel = Dfn.Channel(
                         **channel_copy,
-                        bans=[dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
-                        ban_exemptions=[dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
-                        invite_exceptions=[dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
-                        members=[dfn.ChannelMembers(**member) for member in channel.get('members', [])]
+                        bans=[Dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
+                        ban_exemptions=[Dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
+                        invite_exceptions=[Dfn.ChannelInviteExceptions(**inv_ex) for inv_ex in channel.get('invite_exceptions', [])],
+                        # members=[Dfn.ChannelMembers(**member) for member in channel.get('members', [])]
+                        members=db_members
                     )
-
+            
             return objectChannel
 
         except KeyError as ke:
@@ -133,7 +164,7 @@ class Channel:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def set_mode(self, channel: str, modes: str, parameters: str) -> bool:
+    def set_mode(self, channel: str, modes: str, parameters: str = "") -> bool:
         """Set and unset modes on a channel.
 
         Args:

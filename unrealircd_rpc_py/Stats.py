@@ -1,11 +1,11 @@
 from types import SimpleNamespace
 from typing import Union
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Stats:
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -15,11 +15,15 @@ class Stats:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def get(self, object_detail_level:int = 1) -> Union[dfn.Stats, None]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def get(self, object_detail_level:int = 1) -> Union[Dfn.Stats, None]:
         """Get some quick basic statistics.
 
         Args:
@@ -31,7 +35,7 @@ class Stats:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('stats.get', param={'object_detail_level': object_detail_level})
+            response: dict[str, dict] = self.Connection.query('stats.get', param={'object_detail_level': object_detail_level})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -46,22 +50,30 @@ class Stats:
                 self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            stats: dict = response['result']
-            stats_user_copy: dict = stats.get('user', {}).copy()
-            stats_user_copy.pop('countries')
+            result: dict = response.get('result', {})
+            
+            server_obj = Dfn.StatsServer(**result.get('server', Dfn.StatsServer().to_dict()))
+            channel_obj = Dfn.StatsChannel(**result.get('channel', Dfn.StatsChannel().to_dict()))
+            server_ban_obj = Dfn.StatsServerBan(**result.get('server_ban', Dfn.StatsServerBan().to_dict()))
+            
+            user_dict: dict[str, dict] = result.get('user', {})
 
-            stats_user_country_copy: list[dict] = stats.get('user', {}).get('countries', []).copy()
+            # list of stats user counrties
+            user_country_list_obj: list[Dfn.StatsUserCountries] = []
+            user_countries_list: list[dict] = user_dict.get('countries', [])
+            for user_country in user_countries_list:
+                user_country_list_obj.append(Dfn.StatsUserCountries(**user_country))
 
-            StatsUserObj = dfn.StatsUser(
-                **stats_user_copy,
-                countries=[dfn.StatsUserCountries(**country) for country in stats_user_country_copy]
-            )
+            if 'countries' in user_dict:
+                user_dict.pop('countries')
 
-            statsObject = dfn.Stats(
-                server=dfn.StatsServer(**stats.get('server', {})),
-                user=StatsUserObj,
-                channel=dfn.StatsChannel(**stats.get('channel', {})),
-                server_ban=dfn.StatsServerBan(**stats.get('server_ban', {}))
+            user_obj = Dfn.StatsUser(**user_dict, countries=user_country_list_obj)
+
+            statsObject = Dfn.Stats(
+                server=server_obj,
+                user=user_obj,
+                channel=channel_obj,
+                server_ban=server_ban_obj
             )
 
             return statsObject

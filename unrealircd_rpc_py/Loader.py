@@ -1,5 +1,6 @@
 from typing import Literal
 from unrealircd_rpc_py.Connection import Connection
+from unrealircd_rpc_py.Definition import RPCError
 from unrealircd_rpc_py.User import User
 from unrealircd_rpc_py.Stats import Stats
 from unrealircd_rpc_py.Whowas import Whowas
@@ -14,7 +15,13 @@ from unrealircd_rpc_py.Log import Log
 
 class Loader:
 
-    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket'], url: str = None, path_to_socket_file: str = None, username: str = None, password: str = None, debug_level: Literal[10, 20, 30, 40, 50] = 20) -> None:
+    def __init__(self, req_method: Literal['requests', 'socket', 'unixsocket'], 
+                 url: str = None, 
+                 path_to_socket_file: str = None, 
+                 username: str = None, 
+                 password: str = None, 
+                 debug_level: Literal[10, 20, 30, 40, 50] = 20
+                 ) -> None:
         """Initiate connection to unrealircd
 
         requests and socket:
@@ -62,45 +69,49 @@ class Loader:
         """Access Error Object when there is an error"""
 
         # Create User Instance
-        self.User = User(self.Connection)
+        self.User: User = User(self.Connection)
         """The User module instance"""
 
         # Create Server Instance
-        self.Server = Server(self.Connection)
+        self.Server: Server = Server(self.Connection)
         """The Server module instance"""
 
         # Create Server_ban Instance
-        self.Server_ban = Server_ban(self.Connection)
+        self.Server_ban: Server_ban = Server_ban(self.Connection)
         """The Server_ban module instance"""
 
         # Create Server_ban_exception Instance
-        self.Server_ban_exception = Server_ban_exception(self.Connection)
+        self.Server_ban_exception: Server_ban_exception = Server_ban_exception(self.Connection)
         """The Server_ban_exception module instance"""
 
         # Create Name_ban Instance
-        self.Name_ban = Name_ban(self.Connection)
+        self.Name_ban: Name_ban = Name_ban(self.Connection)
         """The Name_ban module instance"""
 
         # Create Rpc Instance
-        self.Rpc = Rpc(self.Connection)
+        self.Rpc: Rpc = Rpc(self.Connection)
         """The Rpc module instance"""
 
         # Create Spamfilter Instance
-        self.Spamfilter = Spamfilter(self.Connection)
+        self.Spamfilter: Spamfilter = Spamfilter(self.Connection)
         """The Spamfilter module instance"""
 
         # Create Channel Instance
-        self.Channel = Channel(self.Connection)
+        self.Channel: Channel = Channel(self.Connection)
         """The Channel module instance"""
 
         # Create Stats Instance
-        self.Stats = Stats(self.Connection)
+        self.Stats: Stats = Stats(self.Connection)
         """The Stats module instance"""
 
         # Create Whowas Instance
-        self.Whowas = Whowas(self.Connection)
+        self.Whowas: Whowas = Whowas(self.Connection)
         """The Whowas module instance"""
 
         # Create Log Instance
-        self.Log = Log(self.Connection)
+        self.Log: Log = Log(self.Connection)
         """This include mainly send method requires unrealIRCd 6.1.8 or higher"""
+
+    @property
+    def get_error(self) -> RPCError:
+        return self.Connection.Error

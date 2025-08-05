@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Rpc:
 
-    DB_RPC_INFO: list[dfn.RpcInfo] = []
+    DB_RPC_INFO: list[Dfn.RpcInfo] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -16,11 +16,15 @@ class Rpc:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def info(self) -> list[dfn.RpcInfo]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def info(self) -> list[Dfn.RpcInfo]:
         """A response object, with in the result object a "methods" object which is a list of: the API method with in that the name, module name and module version.
 
         Returns:
@@ -49,7 +53,7 @@ class Rpc:
 
             for rpcinfo in rpcinfos:
                 self.DB_RPC_INFO.append(
-                        dfn.RpcInfo(**rpcinfos.get(rpcinfo, {}))
+                        Dfn.RpcInfo(**rpcinfos.get(rpcinfo, {}))
                 )
 
             return self.DB_RPC_INFO

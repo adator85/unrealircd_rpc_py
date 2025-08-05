@@ -13,7 +13,7 @@ class EngineError:
         self.Error.code = 0
         self.Error.message = None
 
-    def set_error(self, code:int, message: str):
+    def set_error(self, code:int, message:str):
         """Engine Error set the error
 
         ### Error Code:
@@ -28,12 +28,5 @@ class EngineError:
             code (int): the error code
             message (str): the message of the error
         """
-        try:
-
-            self.Error.code = code
-            self.Error.message = message
-
-        except KeyError as ke:
-            self.Logs.error(ke)
-        except Exception as err:
-            self.Logs.error(err)
+        self.Error.code = code
+        self.Error.message = message
