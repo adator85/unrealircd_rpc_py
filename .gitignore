@@ -1,6 +1,7 @@
 __pycache__*
 build/*
 .env/*
+.idea/*
 *.egg-info/*
 tests/*
 docs/*

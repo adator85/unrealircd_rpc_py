@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Server_ban_exception:
 
-    DB_SERVERS_BANS_EXCEPTION: list[dfn.ServerBanException] = []
+    DB_SERVERS_BANS_EXCEPTION: list[Dfn.ServerBanException] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -16,11 +16,15 @@ class Server_ban_exception:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def list_(self) -> list[dfn.ServerBanException]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self) -> list[Dfn.ServerBanException]:
         """List server ban exceptions (ELINEs).
 
         Returns:
@@ -31,7 +35,7 @@ class Server_ban_exception:
             self.Connection.EngineError.init_error()
             self.DB_SERVERS_BANS_EXCEPTION = []
 
-            response = self.Connection.query(method='server_ban_exception.list')
+            response: dict[str, dict] = self.Connection.query(method='server_ban_exception.list')
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -46,21 +50,23 @@ class Server_ban_exception:
                 self.Connection.EngineError.set_error(**response["error"])
                 return False
 
-            srvbansexceps = response['result']['list']
+            srvbansexceps = response.get('result', {}).get('list', [])
 
             for srvbansexcep in srvbansexceps:
                 self.DB_SERVERS_BANS_EXCEPTION.append(
-                        dfn.ServerBanException(**srvbansexcep)
+                        Dfn.ServerBanException(**srvbansexcep)
                 )
 
             return self.DB_SERVERS_BANS_EXCEPTION
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return []
 
-    def get(self, name: str) -> dfn.ServerBanException:
+    def get(self, name: str) -> Dfn.ServerBanException:
         """Retrieve all details of a single server ban exception (ELINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -93,7 +99,7 @@ class Server_ban_exception:
 
             srvbanexcep = response['result']['tkl']
 
-            objectServBanExcep = dfn.ServerBanException(**srvbanexcep)
+            objectServBanExcep = Dfn.ServerBanException(**srvbanexcep)
 
             return objectServBanExcep
 
