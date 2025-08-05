@@ -1,14 +1,16 @@
 from types import SimpleNamespace
-from typing import Union, Literal
+from typing import TYPE_CHECKING, Union, Literal
 from time import time
 from unrealircd_rpc_py.Connection import Connection
-# import Definition
+
+if TYPE_CHECKING:
+    import unrealircd_rpc_py.Definition as Dfn
 
 class Log:
 
     # DB_LOG_CONNECT: list[Definition.LogConnect]
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -18,9 +20,13 @@ class Log:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
+
+    @property
+    def get_error(self) -> 'Dfn.RPCError':
+        return self.Error
 
     def list_(self, sources: list = None) -> Union[SimpleNamespace, None]:
         """Fetch past log entries (since boot).

@@ -1,14 +1,14 @@
-import traceback
 from types import SimpleNamespace
-from typing import Union, Literal
+from typing import Any, Union, Literal
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
+
 
 class User:
 
-    DB_USER: list[dfn.Client] = []
+    DB_USER: list[Dfn.Client] = []
 
-    def __init__(self, Connection: Connection) -> None:
+    def __init__(self, connection: Connection) -> None:
 
         # Store the original response
         self.response_raw: str
@@ -18,24 +18,28 @@ class User:
         """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = self.Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
-    def list_(self, object_detail_level: Literal[0, 1, 2, 4] = 2) -> list[dfn.Client]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self, object_detail_level: Literal[0, 1, 2, 4] = 2) -> list[Dfn.Client]:
         """List users
 
         Args:
             object_detail_level (int, optional): set the detail of the response object, see the Detail level column in Structure of a client object. Defaults to 2.
 
         Returns:
-            Client ([dfn.Client]): List of Client Object
+            Client ([Dfn.Client]): List of Client Object
         """
         try:
             self.DB_USER = []
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.list', param={'object_detail_level': object_detail_level})
+            response: dict[str, dict] = self.Connection.query('user.list', param={'object_detail_level': object_detail_level})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -50,7 +54,7 @@ class User:
                 self.Connection.EngineError.set_error(**response["error"])
                 return self.DB_USER
 
-            users:list[dict] = response['result']['list']
+            users:list[dict] = response.get('result', {}).get('list', []) # response['result']['list']
 
             for user in users:
                 user_for_client = user.copy()
@@ -62,17 +66,17 @@ class User:
                 for key in ['channels','security-groups']:
                     user_for_User.pop(key, None)
 
-                UserModel = dfn.User(
+                UserModel = Dfn.User(
                     **user_for_User,
                     security_groups=user.get('user', {}).get('security-groups', []),
-                    channels=[dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
+                    channels=[Dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [Dfn.UserChannel().to_dict()])]
                 )
 
                 self.DB_USER.append(
-                        dfn.Client(
+                        Dfn.Client(
                             **user_for_client,
-                            geoip=dfn.Geoip(**user.get('geoip', {})),
-                            tls=dfn.Tls(**user.get('tls', {})),
+                            geoip=Dfn.Geoip(**user.get('geoip', Dfn.Geoip().to_dict())),
+                            tls=Dfn.Tls(**user.get('tls', Dfn.Tls().to_dict())),
                             user=UserModel
                         )
                 )
@@ -82,13 +86,13 @@ class User:
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
             self.Connection.EngineError.set_error(code=-3,message=ke)
-            return self.DB_USER
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
             self.Connection.EngineError.set_error(code=-3,message=ke)
-            return self.DB_USER
+            return []
 
-    def get(self, nickoruid: str) -> Union[dfn.Client, None]:
+    def get(self, nickoruid: str) -> Union[Dfn.Client, None]:
         """Get user information
 
         Args:
@@ -100,7 +104,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.get', {'nick': nickoruid})
+            response: dict[str, dict] = self.Connection.query('user.get', {'nick': nickoruid})
 
             self.response_raw = response
             self.response_np = self.Connection.json_response_np
@@ -115,7 +119,7 @@ class User:
                 self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            user:list[dict] = response['result']['client']
+            user:dict[str, dict] = response.get('result', {}).get('client', {}) # response['result']['client']
 
             user_for_client = user.copy()
             user_for_User: dict = user.get('user', {}).copy()
@@ -126,16 +130,16 @@ class User:
             for key in ['channels','security-groups']:
                 user_for_User.pop(key, None)
 
-            UserModel = dfn.User(
+            UserModel = Dfn.User(
                 **user_for_User,
                 security_groups=user.get('user', {}).get('security-groups', []),
-                channels=[dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
+                channels=[Dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
             )
 
-            userObject = dfn.Client(
+            userObject = Dfn.Client(
                         **user_for_client,
-                        geoip=dfn.Geoip(**user.get('geoip', {})),
-                        tls=dfn.Tls(**user.get('tls', {})),
+                        geoip=Dfn.Geoip(**user.get('geoip', {})),
+                        tls=Dfn.Tls(**user.get('tls', {})),
                         user=UserModel
                     )
 

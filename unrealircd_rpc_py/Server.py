@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 from typing import Union
 from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as dfn
+import unrealircd_rpc_py.Definition as Dfn
 
 class Server:
 
-    DB_SERVER: list[dfn.ClientServer] = []
-    DB_MODULES: list[dfn.ServerModule] = []
+    DB_SERVER: list[Dfn.ClientServer] = []
+    DB_MODULES: list[Dfn.ServerModule] = []
 
     def __init__(self, Connection: Connection) -> None:
 
@@ -22,7 +22,11 @@ class Server:
         self.Logs = Connection.Logs
         self.Error = Connection.Error
 
-    def list_(self) -> list[dfn.ClientServer]:
+    @property
+    def get_error(self) -> Dfn.RPCError:
+        return self.Error
+
+    def list_(self) -> list[Dfn.ClientServer]:
         """List servers.
 
         Returns:
@@ -63,20 +67,20 @@ class Server:
                 for key in ['rpc_modules']:
                     FeaturesForServer.pop(key, None)
 
-                FeaturesObject = dfn.ServerFeatures(
+                FeaturesObject = Dfn.ServerFeatures(
                     **FeaturesForServer,
-                    rpc_modules=[dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
+                    rpc_modules=[Dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
                     )
 
-                ServerObject = dfn.Server(
+                ServerObject = Dfn.Server(
                     **ServerForClientServer,
                     features=FeaturesObject
                 )
 
-                ClientServerObject = dfn.ClientServer(
+                ClientServerObject = Dfn.ClientServer(
                     **ClientServer,
                     server=ServerObject,
-                    tls=dfn.Tls(**server.get('tls', {}))
+                    tls=Dfn.Tls(**server.get('tls', {}))
                 )
 
                 self.DB_SERVER.append(ClientServerObject)
@@ -90,7 +94,7 @@ class Server:
             self.Logs.error(f'General error: {err}')
             return self.DB_SERVER
 
-    def get(self, serverorsid: str = None) -> Union[dfn.ClientServer, None]:
+    def get(self, serverorsid: str = None) -> Union[Dfn.ClientServer, None]:
         """Retrieve all details of a single server.
 
         Args:
@@ -132,20 +136,20 @@ class Server:
             for key in ['rpc_modules']:
                 FeaturesForServer.pop(key, None)
 
-            FeaturesObject = dfn.ServerFeatures(
+            FeaturesObject = Dfn.ServerFeatures(
                 **FeaturesForServer,
-                rpc_modules=[dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
+                rpc_modules=[Dfn.ServerRpcModules(**rpcmod) for rpcmod in server.get('server', {}).get('features', {}).get('rpc_modules', [])]
                 )
 
-            ServerObject = dfn.Server(
+            ServerObject = Dfn.Server(
                 **ServerForClientServer,
                 features=FeaturesObject
             )
 
-            ClientServerObject = dfn.ClientServer(
+            ClientServerObject = Dfn.ClientServer(
                 **ClientServer,
                 server=ServerObject,
-                tls=dfn.Tls(**server.get('tls', {}))
+                tls=Dfn.Tls(**server.get('tls', {}))
             )
 
             return ClientServerObject
@@ -157,7 +161,7 @@ class Server:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def rehash(self, serverorsid: str = None) -> Union[dfn.ServerRehash, None]:
+    def rehash(self, serverorsid: str = None) -> Union[Dfn.ServerRehash, None]:
         """Rehash the server.
 
         IMPORTANT: If all servers on your network have rpc.modules.default.conf included then this can return an object with full rehash details.
@@ -191,19 +195,19 @@ class Server:
 
             rehash_log: list[dict] = rehash.get('log', []).copy()
 
-            DB_REHASH_LOG: list[dfn.ServerRehashLog] = []
+            DB_REHASH_LOG: list[Dfn.ServerRehashLog] = []
             for rlog in rehash_log:
                 rlog_copy = rlog.copy()
                 rlog_copy.pop('source', None)
                 DB_REHASH_LOG.append(
-                    dfn.ServerRehashLog(
+                    Dfn.ServerRehashLog(
                         **rlog_copy,
-                        source=dfn.ServerRehashLogSource(**rlog.get('source', {}))
+                        source=Dfn.ServerRehashLogSource(**rlog.get('source', {}))
                     )
                 )
 
-            rehashObject = dfn.ServerRehash(
-                rehash_client=dfn.ServerRehashClient(**rehash.get("rehash_client", {})),
+            rehashObject = Dfn.ServerRehash(
+                rehash_client=Dfn.ServerRehashClient(**rehash.get("rehash_client", {})),
                 log=DB_REHASH_LOG,
                 success=rehash.get('success', None)
             )
@@ -294,7 +298,7 @@ class Server:
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def module_list(self, serverorsid: str = None) -> list[dfn.ServerModule]:
+    def module_list(self, serverorsid: str = None) -> list[Dfn.ServerModule]:
         """Get the module list (list of loaded modules) on a server.
 
         IMPORTANT: This only works with remote servers if all servers on your network have rpc.modules.default.conf included.
@@ -328,7 +332,7 @@ class Server:
             modules = response['result']['list']
 
             for module in modules:
-                self.DB_MODULES.append(dfn.ServerModule(**module))
+                self.DB_MODULES.append(Dfn.ServerModule(**module))
 
             return self.DB_MODULES
 
