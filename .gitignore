@@ -7,5 +7,6 @@ tests/*
 docs/*
 setup.py
 test.py
+test_live.py
 CallbackObject.py
 *.zip

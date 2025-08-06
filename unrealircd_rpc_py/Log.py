@@ -1,23 +1,13 @@
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Union, Literal
+from typing import Union, Literal, Optional
 from time import time
 from unrealircd_rpc_py.Connection import Connection
+from unrealircd_rpc_py.Definition import RPCError
 
-if TYPE_CHECKING:
-    import unrealircd_rpc_py.Definition as Dfn
 
 class Log:
 
-    # DB_LOG_CONNECT: list[Definition.LogConnect]
-
     def __init__(self, connection: Connection) -> None:
-
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = connection
@@ -25,10 +15,18 @@ class Log:
         self.Error = connection.Error
 
     @property
-    def get_error(self) -> 'Dfn.RPCError':
+    def get_error(self) -> RPCError:
         return self.Error
 
-    def list_(self, sources: list = None) -> Union[SimpleNamespace, None]:
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
+
+    def list_(self, sources: Optional[list] = None) -> Union[SimpleNamespace, None]:
         """Fetch past log entries (since boot).
 
         Returns:
@@ -37,13 +35,10 @@ class Log:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='log.list', 
                 param={"sources": sources}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -55,14 +50,18 @@ class Log:
                 self.Connection.EngineError.set_error(**response["error"])
                 return None
 
-            return self.response_np
+            return self.get_response_np
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return None
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return None
 
-    def send(self, msg: str, level: Literal['debug','info','warn','error','fatal'], subsystem: str, event_id: str, timestamp: float = time()) -> bool:
+    def send(self, msg: str, level: Literal['debug','info','warn','error','fatal'],
+             subsystem: str, event_id: str, timestamp: float = time()
+             ) -> bool:
         """ Send a log message / server notice.
 
         Requires UnrealIRCd 6.1.8 or later
@@ -85,9 +84,6 @@ class Log:
                     method='log.send',
                     param={"msg": msg, "level": level, "subsystem": subsystem, "event_id": event_id, "timestamp": timestamp}
                     )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])

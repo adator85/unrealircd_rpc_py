@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Union
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
@@ -24,6 +25,14 @@ class Rpc:
     def get_error(self) -> Dfn.RPCError:
         return self.Error
 
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
+
     def info(self) -> list[Dfn.RpcInfo]:
         """A response object, with in the result object a "methods" object which is a list of: the API method with in that the name, module name and module version.
 
@@ -34,20 +43,17 @@ class Rpc:
             self.DB_RPC_INFO = []
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='rpc.info')
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='rpc.info')
 
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return self.DB_RPC_INFO
+                return []
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_RPC_INFO
+                return []
 
             rpcinfos: dict[dict, dict] = response['result']['methods']
 
@@ -60,10 +66,10 @@ class Rpc:
 
         except KeyError as ke:
             self.Logs.error(ke)
-            return self.DB_RPC_INFO
+            return []
         except Exception as err:
             self.Logs.error(err)
-            return self.DB_RPC_INFO
+            return []
 
     def set_issuer(self, name: str) -> bool:
         """Set who is the issuer of all the subsequent commands that are done. 
@@ -81,13 +87,10 @@ class Rpc:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='rpc.set_issuer', 
                 param={"name": name}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -133,13 +136,10 @@ class Rpc:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='rpc.add_timer',
                 param={"timer_id": timer_id, "every_msec": every_msec, "request": request}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -160,8 +160,10 @@ class Rpc:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def del_timer(self, timer_id: str) -> bool:
         """Remove a previously added timer. Note that you can only cancel timers that belong to your own connection.
@@ -177,13 +179,10 @@ class Rpc:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response:dict[str, dict] = self.Connection.query(
                 method='rpc.del_timer', 
                 param={"timer_id": timer_id}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -204,5 +203,7 @@ class Rpc:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False

@@ -1,19 +1,14 @@
 from types import SimpleNamespace
+from typing import Union
+
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
-class Server_ban_exception:
+class ServerBanException:
 
     DB_SERVERS_BANS_EXCEPTION: list[Dfn.ServerBanException] = []
 
     def __init__(self, connection: Connection) -> None:
-
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = connection
@@ -23,6 +18,14 @@ class Server_ban_exception:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.ServerBanException]:
         """List server ban exceptions (ELINEs).
@@ -37,18 +40,15 @@ class Server_ban_exception:
 
             response: dict[str, dict] = self.Connection.query(method='server_ban_exception.list')
 
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
-
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+                return []
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.EngineError.set_error(**response["error"])
-                return False
+                return []
 
             srvbansexceps = response.get('result', {}).get('list', [])
 
@@ -66,7 +66,7 @@ class Server_ban_exception:
             self.Logs.error(f'General error: {err}')
             return []
 
-    def get(self, name: str) -> Dfn.ServerBanException:
+    def get(self, name: str) -> Union[Dfn.ServerBanException, None]:
         """Retrieve all details of a single server ban exception (ELINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -82,33 +82,33 @@ class Server_ban_exception:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban_exception.get', param={'name': name})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='server_ban_exception.get', param={'name': name})
 
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.EngineError.set_error(**response["error"])
-                return False
+                return None
 
             srvbanexcep = response['result']['tkl']
 
-            objectServBanExcep = Dfn.ServerBanException(**srvbanexcep)
+            obj = Dfn.ServerBanException(**srvbanexcep)
 
-            return objectServBanExcep
+            return obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
         except Exception as err:
             self.Logs.error(f'General error: {err}')
 
-    def add(self, name: str, exception_types: str, reason: str, set_by: str = None, expire_at: str = None, duration_sting: str = None) -> bool:
+    def add(self, name: str, exception_types: str, reason: str,
+            set_by: str = None, expire_at: str = None,
+            duration_sting: str = None
+            ) -> bool:
         """Add a server ban exception (ELINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -129,10 +129,7 @@ class Server_ban_exception:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban_exception.add', param={"name": name, "exception_types": exception_types, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': set_by})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='server_ban_exception.add', param={"name": name, "exception_types": exception_types, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': set_by})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -153,8 +150,10 @@ class Server_ban_exception:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def del_(self, name: str, set_by: str = None) -> bool:
         """Delete a server ban exception (ELINE).
@@ -173,10 +172,7 @@ class Server_ban_exception:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban_exception.del', param={"name": name, 'set_by': set_by})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='server_ban_exception.del', param={"name": name, 'set_by': set_by})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -197,5 +193,7 @@ class Server_ban_exception:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False

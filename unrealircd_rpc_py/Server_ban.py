@@ -3,27 +3,28 @@ from typing import Union
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
-class Server_ban:
+class ServerBan:
 
     DB_SERVERS_BANS: list[Dfn.ServerBan] = []
 
-    def __init__(self, Connection: Connection) -> None:
-
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
+    def __init__(self, connection: Connection) -> None:
 
         # Get the Connection instance
-        self.Connection = Connection
-        self.Logs = Connection.Logs
-        self.Error = Connection.Error
+        self.Connection = connection
+        self.Logs = connection.Logs
+        self.Error = connection.Error
 
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.ServerBan]:
         """List server bans (LINEs).
@@ -36,9 +37,6 @@ class Server_ban:
             self.DB_SERVERS_BANS = []
 
             response:dict[str, dict] = self.Connection.query(method='server_ban.list')
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -59,16 +57,16 @@ class Server_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return self.DB_SERVERS_BANS
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return self.DB_SERVERS_BANS
+            return []
 
-    def get(self, type: str, name: str) -> Union[Dfn.ServerBan, None]:
+    def get(self, query_type: str, name: str) -> Union[Dfn.ServerBan, None]:
         """Retrieve all details of a single server ban (LINE).
 
         Args:
-            type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
+            query_type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
 
         Returns:
@@ -77,10 +75,7 @@ class Server_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response:dict[str, dict] = self.Connection.query(method='server_ban.get', param={'type': type, 'name': name})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='server_ban.get', param={'type': query_type, 'name': name})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -94,9 +89,9 @@ class Server_ban:
 
             srvban: dict = response.get('result', {}).get('tkl', {})
 
-            objectServerBan = Dfn.ServerBan(**srvban)
+            obj = Dfn.ServerBan(**srvban)
 
-            return objectServerBan
+            return obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
@@ -105,7 +100,8 @@ class Server_ban:
             self.Logs.error(f'General error: {err}')
             return None
 
-    def add(self, type: str, name: str, reason: str, expire_at: str, duration_sting: str, set_by: str = None) -> bool:
+    def add(self, query_type: str, name: str, reason: str, expire_at: str,
+            duration_sting: str, set_by: str = None) -> bool:
         """Add a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -113,7 +109,7 @@ class Server_ban:
         https://www.unrealircd.org/docs/JSON-RPC:Server_ban#Structure_of_a_server_ban
 
         Args:
-            type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
+            query_type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
             reason (str): The reason of the ban
             expire_at (str): Date/Time when the server ban will expire. NULL means: never.
@@ -126,10 +122,11 @@ class Server_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban.add', param={"type": type, "name": name, "reason": reason, "expire_at": expire_at, "duration_string": duration_sting, 'set_by': set_by})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='server_ban.add',
+                                             param={"type": query_type, "name": name, "reason": reason,
+                                                    "expire_at": expire_at, "duration_string": duration_sting,
+                                                    'set_by': set_by}
+                                             )
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -150,10 +147,12 @@ class Server_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
-    def del_(self, type: str, name: str, set_by: str = None) -> bool:
+    def del_(self, query_type: str, name: str, set_by: str = None) -> bool:
         """Delete a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -161,7 +160,7 @@ class Server_ban:
         https://www.unrealircd.org/docs/JSON-RPC:Server_ban#Structure_of_a_server_ban
 
         Args:
-            type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
+            query_type (str): Type of the server ban. One of: gline, kline, gzline, zline, spamfilter, qline, except, shun, local-qline, local-exception, local-spamfilter.
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
             set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
 
@@ -171,10 +170,8 @@ class Server_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='server_ban.del', param={"type": type, "name": name, 'set_by': set_by})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='server_ban.del',
+                                             param={"type": query_type, "name": name, 'set_by': set_by})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -195,5 +192,7 @@ class Server_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False

@@ -10,7 +10,7 @@ class Channel:
     def __init__(self, connection: Connection) -> None:
 
         # Store the original response
-        self.response_raw: str
+        self.response_raw: str = ''
         """Original response used to see available keys."""
 
         self.response_np: SimpleNamespace
@@ -24,6 +24,14 @@ class Channel:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self, object_detail_level: Literal[0, 1, 2, 3, 4] = 1) -> list[Dfn.Channel]:
         """List channels.
@@ -42,10 +50,7 @@ class Channel:
             self.DB_CHANNELS = []
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='channel.list', param={'object_detail_level': object_detail_level})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='channel.list', param={'object_detail_level': object_detail_level})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -100,9 +105,6 @@ class Channel:
 
             response: dict[str, dict] = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': object_detail_level})
 
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
-
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
@@ -146,7 +148,7 @@ class Channel:
 
                 db_members.append(member_obj)
 
-            objectChannel = Dfn.Channel(
+            channel_obj = Dfn.Channel(
                         **channel_copy,
                         bans=[Dfn.ChannelBans(**ban) for ban in channel.get('bans', [])],
                         ban_exemptions=[Dfn.ChannelBanExemptions(**ban_ex) for ban_ex in channel.get('ban_exemptions', [])],
@@ -155,7 +157,7 @@ class Channel:
                         members=db_members
                     )
             
-            return objectChannel
+            return channel_obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
@@ -178,10 +180,7 @@ class Channel:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='channel.set_mode', param={"channel": channel,"modes": modes,"parameters": parameters})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='channel.set_mode', param={"channel": channel,"modes": modes,"parameters": parameters})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -202,8 +201,10 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_topic(self, channel: str, topic: str, set_by: str = None, set_at: str = None) -> bool:
         """Set a topic on a channel.
@@ -220,10 +221,7 @@ class Channel:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='channel.set_topic', param={"channel": channel, "topic": topic, "set_by": set_by, "set_at": set_at})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='channel.set_topic', param={"channel": channel, "topic": topic, "set_by": set_by, "set_at": set_at})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -244,8 +242,10 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def kick(self, channel: str, nick: str, reason: str) -> bool:
         """Kick a user from a channel
@@ -261,10 +261,7 @@ class Channel:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='channel.kick', param={"channel": channel, "nick": nick, "reason": reason})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='channel.kick', param={"channel": channel, "nick": nick, "reason": reason})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -285,5 +282,7 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
