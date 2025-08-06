@@ -35,4 +35,4 @@ try:
             print(mod.name)
 
 except AttributeError as ae:
-    rpc.Connection.Logs.error(ae)
+    print(ae)

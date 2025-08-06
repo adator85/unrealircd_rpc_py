@@ -9,13 +9,6 @@ class Spamfilter:
 
     def __init__(self, connection: Connection) -> None:
 
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
-
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
@@ -24,6 +17,14 @@ class Spamfilter:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.Spamfilter]:
         """List spamfilters.
@@ -35,10 +36,7 @@ class Spamfilter:
             self.Connection.EngineError.init_error()
             self.DB_SPAMFILTERS = []
 
-            response = self.Connection.query(method='spamfilter.list')
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='spamfilter.list')
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -59,10 +57,10 @@ class Spamfilter:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return self.DB_SPAMFILTERS
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return self.DB_SPAMFILTERS
+            return []
 
     def get(self, name: str, match_type: str, ban_action: str, spamfilter_targets: str) -> Union[Dfn.Spamfilter, None]:
         """Retrieve all details of a single spamfilter.
@@ -83,10 +81,7 @@ class Spamfilter:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='spamfilter.get', param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response:dict[str, dict] = self.Connection.query(method='spamfilter.get', param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -100,9 +95,9 @@ class Spamfilter:
 
             spamfilter = response['result']['tkl']
 
-            objectSpamfilter = Dfn.Spamfilter(**spamfilter)
+            object_spamfilter = Dfn.Spamfilter(**spamfilter)
 
-            return objectSpamfilter
+            return object_spamfilter
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
@@ -127,7 +122,7 @@ class Spamfilter:
             ban_duration (int): The duration of the ban
             spamfilter_targets (str): Only for spamfilters! Which targets the spamfilter must filter on.
             reason (str): The reason of the ban
-            _set_by (str, optional): Name of the person or server who set the ban. Default to None
+            set_by (str, optional): Name of the person or server who set the ban. Default to None
 
         Returns:
             bool: True if success
@@ -135,13 +130,10 @@ class Spamfilter:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response:dict[str, dict] = self.Connection.query(
                 method='spamfilter.add', 
                 param={"name": name, "match_type": match_type, "ban_action": ban_action, "ban_duration": ban_duration, "spamfilter_targets": spamfilter_targets, 'reason': reason, 'set_by': set_by}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -162,8 +154,10 @@ class Spamfilter:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def del_(self,  name: str, match_type: str, ban_action: str, spamfilter_targets: str, _set_by: str = None) -> bool:
         """Delete a spamfilter.
@@ -185,13 +179,10 @@ class Spamfilter:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='spamfilter.del',
                 param={"name": name, "match_type": match_type, "ban_action": ban_action, "spamfilter_targets": spamfilter_targets, 'set_by': _set_by}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -212,5 +203,7 @@ class Spamfilter:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False

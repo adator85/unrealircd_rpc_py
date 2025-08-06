@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import Union
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
@@ -8,13 +9,6 @@ class Whowas:
 
     def __init__(self, connection: Connection) -> None:
 
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
-
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
@@ -23,6 +17,14 @@ class Whowas:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def get(self, nick:str = None, ip:str = None, object_detail_level:int = 2) -> list[Dfn.Whowas]:
         """Get WHOWAS history of a user. 6.1.0+
@@ -40,9 +42,6 @@ class Whowas:
             self.Connection.EngineError.init_error()
 
             response: dict[str, dict] = self.Connection.query('whowas.get', param={'nick': nick, 'ip': ip, 'object_detail_level': object_detail_level})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
