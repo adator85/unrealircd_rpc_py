@@ -11,7 +11,7 @@ class EngineError:
     def init_error(self):
 
         self.Error.code = 0
-        self.Error.message = None
+        self.Error.message = ''
 
     def set_error(self, code:int, message:str):
         """Engine Error set the error

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from typing import Any, Union, Literal
+from typing import Union, Literal
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
@@ -10,13 +10,6 @@ class User:
 
     def __init__(self, connection: Connection) -> None:
 
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
-
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
@@ -25,6 +18,14 @@ class User:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self, object_detail_level: Literal[0, 1, 2, 4] = 2) -> list[Dfn.Client]:
         """List users
@@ -41,9 +42,6 @@ class User:
 
             response: dict[str, dict] = self.Connection.query('user.list', param={'object_detail_level': object_detail_level})
 
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
-
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
@@ -58,16 +56,16 @@ class User:
 
             for user in users:
                 user_for_client = user.copy()
-                user_for_User: dict = user.get('user', {}).copy()
+                user_for_user: dict = user.get('user', {}).copy()
 
                 for key in ['geoip','tls','user']:
                     user_for_client.pop(key, None)
 
                 for key in ['channels','security-groups']:
-                    user_for_User.pop(key, None)
+                    user_for_user.pop(key, None)
 
-                UserModel = Dfn.User(
-                    **user_for_User,
+                user_model = Dfn.User(
+                    **user_for_user,
                     security_groups=user.get('user', {}).get('security-groups', []),
                     channels=[Dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [Dfn.UserChannel().to_dict()])]
                 )
@@ -77,7 +75,7 @@ class User:
                             **user_for_client,
                             geoip=Dfn.Geoip(**user.get('geoip', Dfn.Geoip().to_dict())),
                             tls=Dfn.Tls(**user.get('tls', Dfn.Tls().to_dict())),
-                            user=UserModel
+                            user=user_model
                         )
                 )
 
@@ -89,7 +87,7 @@ class User:
             return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            self.Connection.EngineError.set_error(code=-3,message=ke)
+            self.Connection.EngineError.set_error(code=-3,message=err)
             return []
 
     def get(self, nickoruid: str) -> Union[Dfn.Client, None]:
@@ -106,9 +104,6 @@ class User:
 
             response: dict[str, dict] = self.Connection.query('user.get', {'nick': nickoruid})
 
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
-
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
@@ -122,28 +117,28 @@ class User:
             user:dict[str, dict] = response.get('result', {}).get('client', {}) # response['result']['client']
 
             user_for_client = user.copy()
-            user_for_User: dict = user.get('user', {}).copy()
+            user_for_user: dict = user.get('user', {}).copy()
 
             for key in ['geoip','tls','user']:
                 user_for_client.pop(key, None)
 
             for key in ['channels','security-groups']:
-                user_for_User.pop(key, None)
+                user_for_user.pop(key, None)
 
-            UserModel = Dfn.User(
-                **user_for_User,
+            user_model = Dfn.User(
+                **user_for_user,
                 security_groups=user.get('user', {}).get('security-groups', []),
                 channels=[Dfn.UserChannel(**chans) for chans in user.get('user', {}).get('channels', [])]
             )
 
-            userObject = Dfn.Client(
+            user_obj = Dfn.Client(
                         **user_for_client,
                         geoip=Dfn.Geoip(**user.get('geoip', {})),
                         tls=Dfn.Tls(**user.get('tls', {})),
-                        user=UserModel
+                        user=user_model
                     )
 
-            return userObject
+            return user_obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
@@ -158,7 +153,7 @@ class User:
         if the new nick name already exists, the other existing user is killed and we will take that new nick.
 
         Args:
-            nick (str): the nick name or the UID
+            nickoruid (str): the nick name or the UID
             newnick (str): the new nick name
             force (bool, optional): q-lines (banned nick) checks will be bypassed. Defaults to False.
 
@@ -168,10 +163,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': force})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': force})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -187,8 +179,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_username(self, nickoruid: str, username:str) -> bool:
         """Set the username / ident of a user.
@@ -203,10 +197,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -222,8 +213,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_realname(self, nickoruid: str, realname:str) -> bool:
         """Set the realname / gecos of a user.
@@ -238,10 +231,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -257,8 +247,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_vhost(self, nickoruid: str, vhost:str) -> bool:
         """Set a virtual host (vhost) on the user.
@@ -273,10 +265,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -292,8 +281,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_mode(self, nickoruid: str, modes:str) -> bool:
         """Change the modes of a user.
@@ -308,10 +299,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -327,8 +315,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def set_snomask(self, nickoruid: str, snomask:str) -> bool:
         """Change the snomask of a user.
@@ -343,10 +333,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -362,10 +349,15 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
-    def set_oper(self, nickoruid: str, oper_account:str, oper_class: str, class_: str = '', modes: str = '', snomask: str = '', vhost: str = '') -> bool:
+    def set_oper(self, nickoruid: str, oper_account:str, oper_class: str,
+                 class_: str = '', modes: str = '',
+                 snomask: str = '', vhost: str = ''
+                 ) -> bool:
         """Make user an IRC operator.
 
         Args:
@@ -383,10 +375,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': class_, 'modes': modes, 'snomask': snomask, 'vhost': vhost})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': class_, 'modes': modes, 'snomask': snomask, 'vhost': vhost})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -402,8 +391,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def join(self, nickoruid: str, channel:str, key: str = '', force: bool = False) -> bool:
         """Join a user to a channel.
@@ -424,10 +415,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': key, 'force': force})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': key, 'force': force})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -443,8 +431,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def part(self, nickoruid: str, channel:str, force: bool = False) -> bool:
         """Part a user from a channel.
@@ -463,10 +453,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': force})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': force})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -482,8 +469,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def kill(self, nickoruid: str, reason:str) -> bool:
         """Kill a user, showing that the user was forcefully removed.
@@ -501,10 +490,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -520,8 +506,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def quit(self, nickoruid: str, reason:str) -> bool:
         """Quit a user, pretending it was a normal QUIT.
@@ -540,10 +528,7 @@ class User:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -559,5 +544,7 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
