@@ -7,13 +7,6 @@ class Stats:
 
     def __init__(self, connection: Connection) -> None:
 
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
-
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
@@ -22,6 +15,14 @@ class Stats:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def get(self, object_detail_level:int = 1) -> Union[Dfn.Stats, None]:
         """Get some quick basic statistics.
@@ -36,9 +37,6 @@ class Stats:
             self.Connection.EngineError.init_error()
 
             response: dict[str, dict] = self.Connection.query('stats.get', param={'object_detail_level': object_detail_level})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -69,14 +67,14 @@ class Stats:
 
             user_obj = Dfn.StatsUser(**user_dict, countries=user_country_list_obj)
 
-            statsObject = Dfn.Stats(
+            stats_obj = Dfn.Stats(
                 server=server_obj,
                 user=user_obj,
                 channel=channel_obj,
                 server_ban=server_ban_obj
             )
 
-            return statsObject
+            return stats_obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')

@@ -1,4 +1,3 @@
-# import json.scanner
 import requests
 import json
 import urllib3
@@ -10,9 +9,8 @@ import ssl
 import time
 import logging
 import random
-import traceback
 from requests.auth import HTTPBasicAuth
-from typing import Literal, Union, Optional
+from typing import Literal, Union, Optional, Any
 from types import SimpleNamespace
 from unrealircd_rpc_py.EngineError import EngineError
 
@@ -21,7 +19,7 @@ class Connection:
     def __init__(self, req_method:str, url: str, path_to_socket_file: str, username: str, password: str, debug_level: int) -> None:
 
         self.debug_level = debug_level
-        self.Logs: logging
+        self.Logs: logging.Logger
         self.__init_log_system()
 
         self.EngineError = EngineError()
@@ -29,22 +27,22 @@ class Connection:
         self.Error = self.EngineError.Error
         """Error attribut: to be used to print errors"""
 
-        self.url: str = url
+        self.url: Optional[str] = url
         self.path_to_socket_file = path_to_socket_file
 
         self.endpoint: Optional[str] = None
-        self.host: str = None
+        self.host: Optional[str] = None
         self.port: int = 0
         self.username = username
         self.password = password
 
         self.request: str = ''
         self.req_method = req_method
-        self.str_response = ''
-        self.json_response = ''
 
         # Option 2 with Namespacescs
-        self.json_response_np: SimpleNamespace
+        self.__response: Optional[dict] = {}
+        self.__response_np: Optional[SimpleNamespace] = SimpleNamespace()
+
         self.query('stats.get')
 
     def __check_url(self, url: str) -> bool:
@@ -113,6 +111,7 @@ class Connection:
             return response
         except NameError as nameerr:
             self.Logs.critical(f'NameError: {nameerr}')
+            return False
 
     def __is_error_connection(self, response: str) -> bool:
         """If True, it means that there is an error
@@ -145,11 +144,8 @@ class Connection:
             return False
 
     def __send_to_unixsocket(self):
+        sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
         try:
-            self.json_response = None
-            self.json_response_np: SimpleNamespace = None
-
-            sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
 
             if not self.__check_unix_socket_file(self.path_to_socket_file):
                 return None
@@ -173,10 +169,7 @@ class Connection:
                     break
 
             str_data = response.decode()
-            self.json_response = json.loads(str_data)
-            self.json_response_np: SimpleNamespace = json.loads(str_data, object_hook=lambda d: SimpleNamespace(**d))
-
-            sock.close()
+            self.__set_responses(str_data)
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
@@ -187,12 +180,12 @@ class Connection:
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
             self.EngineError.set_error(code=-1, message=err.__str__())
+        finally:
+            sock.close()
 
     def __send_srequest(self):
         """S For socket connection"""
         try:
-            self.json_response = None
-            self.json_response_np: SimpleNamespace = None
 
             if not self.__check_url(self.url) and not self.url is None:
                 self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
@@ -236,14 +229,13 @@ class Connection:
                     if self.__is_error_connection(body):
                         return None
 
-                    self.json_response = json.loads(body)
-                    self.json_response_np: SimpleNamespace = json.loads(body, object_hook=lambda d: SimpleNamespace(**d))
+                    self.__set_responses(body)
 
         except (socket.error, ssl.SSLError) as serror:
             self.Logs.error(f'Socket Error: {serror}')
             self.EngineError.set_error(code=-1, message=f'Socket Error: {serror}')
         except json.JSONDecodeError as jdecErr:
-            self.Logs.error(f'Socket Error: {jdecErr}')
+            self.Logs.error(f'JSONDecodeError: {jdecErr}')
             self.EngineError.set_error(code=-1, message=f'Json Decode Error: {jdecErr}')
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
@@ -252,21 +244,20 @@ class Connection:
     def __send_request(self):
         """Use requests module"""
         try:
-            self.json_response = None
-            self.json_response_np: SimpleNamespace = None
 
             if not self.__check_url(self.url) and not self.url is None:
                 self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
                 return None
 
             verify = False
+            url: Optional[str] = self.url
 
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
             credentials = HTTPBasicAuth(self.username, self.password)
             jsonrequest = self.request
 
-            response = requests.post(url=self.url, auth=credentials, data=jsonrequest, verify=verify)
+            response = requests.post(url=url, auth=credentials, data=jsonrequest, verify=verify)
 
             if response.status_code != 200:
                 self.EngineError.set_error(code=-1, message=f"Status code {response.status_code} | {response.reason}")
@@ -276,10 +267,7 @@ class Connection:
                 return None
 
             decoded_response = json.dumps(response.text)
-
-            self.str_response = decoded_response
-            self.json_response = json.loads(json.loads(decoded_response))
-            self.json_response_np: SimpleNamespace = json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
+            self.__set_responses(json.loads(decoded_response))
 
         except KeyError as ke:
             self.Logs.error(f"KeyError : {ke}")
@@ -290,8 +278,8 @@ class Connection:
             self.Logs.error(f"Initial request: {self.request}")
             self.EngineError.set_error(code=-1, message=f'Timeout: {rt}')
         except requests.ConnectionError as ce:
-            self.Logs.critical(f"Connection Error : {ce}")
-            self.Logs.critical(f"Initial request: {self.request}")
+            self.Logs.error(f"Connection Error : {ce}")
+            self.Logs.error(f"Initial request: {self.request}")
             if 'connection aborted.' in str(ce).lower().strip():
                 self.EngineError.set_error(code=-1, message=f'>> Connection Aborted <<')
         except json.decoder.JSONDecodeError as jsonerror:
@@ -347,13 +335,18 @@ class Connection:
         # Add handler to logs
         self.Logs.addHandler(stdout_hanlder)
 
-    def query(self, method: Union[Literal['stats.get', 'rpc.info','user.list'], str], param: dict = {}, id: int = 123, jsonrpc:str = '2.0') -> Union[str, any, None, bool]:
+    def query(self,
+              method: Union[Literal['stats.get', 'rpc.info','user.list'], str],
+              param: Optional[dict] = None,
+              query_id: int = 123,
+              jsonrpc: str = '2.0'
+              ) -> Union[dict, None]:
         """This method will use to run the queries
 
         Args:
             method (Union[Literal[&#39;stats.get&#39;, &#39;rpc.info&#39;,&#39;user.list&#39;], str]): The method to send to unrealircd
             param (dict, optional): the paramaters to send to unrealircd. Defaults to {}.
-            id (int, optional): id of the request. Defaults to 123.
+            query_id (int, optional): id of the request. Defaults to 123.
             jsonrpc (str, optional): jsonrpc. Defaults to '2.0'.
 
         Returns:
@@ -364,14 +357,14 @@ class Connection:
 
         # data = '{"jsonrpc": "2.0", "method": "stats.get", "params": {}, "id": 123}'
         get_method = method
-        get_param = param
+        get_param = {} if param is None else param
 
-        if id == 123:
+        if query_id == 123:
             rand = random.randint(1, 6000)
             get_id = int(time.time()) + rand
 
         else:
-            get_id = id
+            get_id = query_id
 
         response = {
             "jsonrpc": jsonrpc,
@@ -392,12 +385,12 @@ class Connection:
             self.Logs.warning('No valid request method')
             self.EngineError.set_error(code=-1, message='<< Invalid method >>')
 
-        if self.json_response == '' or self.json_response is None:
+        if self.__response == '' or self.__response is None:
             return None
 
-        return self.json_response
+        return self.get_response()
 
-    def get_keys_levels(self, data: any, prefix=''):
+    def get_keys_levels(self, data: Any, prefix=''):
         """Parse the Json output and list all available keys
         """
 
@@ -412,3 +405,36 @@ class Connection:
                 complete_key = f"{prefix}[{index}]"
                 print(f"Key : {complete_key}, Type : list")
                 self.get_keys_levels(element, complete_key)
+
+    def dict_to_namespace(self, dictionary: dict):
+
+        if isinstance(dictionary, dict):
+            return SimpleNamespace(**{key: self.dict_to_namespace(value) for key, value in dictionary.items()})
+
+        return dictionary
+
+    def __set_responses(self, response: str):
+        """Set response as dict and as simple name space"""
+        # Set dict response
+        self.__response_np: Optional[SimpleNamespace] = None
+        self.__response: Optional[dict] = None
+
+        if not response:
+            self.Logs.error(f"Impossible to load response: {response}")
+            return
+
+        self.__response = json.loads(response)
+
+        if not isinstance(self.__response, dict):
+            self.__response = None
+            self.__response_np = None
+            self.Logs.error(f"Impossible to load response: {response}")
+
+        # Set response name space
+        self.__response_np = self.dict_to_namespace(self.__response)
+
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.__response_np
+
+    def get_response(self) -> Union[dict, None]:
+        return self.__response

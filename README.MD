@@ -18,6 +18,7 @@ If you are using Python3, this package can help you to parse all json responses 
 > I recommend installing a virtual environment and then installing the package within it.
 
 ## How to establish the link
+### Using requests module
 ```python
     from unrealircd_rpc_py.Loader import Loader
     # Using requests method
@@ -27,7 +28,10 @@ If you are using Python3, this package can help you to parse all json responses 
             username='apiname',
             password='apiPASSWORD'
         )
-
+```
+### Using socket method
+```python
+    from unrealircd_rpc_py.Loader import Loader
     # Using socket method
     rpc = Loader(
             req_method='socket',
@@ -35,22 +39,30 @@ If you are using Python3, this package can help you to parse all json responses 
             username='apiname',
             password='apiPASSWORD'
         )
-
+```
+### Using unixsocket method (Local only)
+```python
+    from unrealircd_rpc_py.Loader import Loader
     # Using unixsocket method (Local only)
     rpc = Loader(
             req_method='unixsocket',
             path_to_socket_file='/path/to/unrealircd/data/rpc.socket'
         )
-
+```
+### Live Connection (Local Only)
+```python
     from unrealircd_rpc_py.Live import Live
-    # Live Connection (Local only)
+    # Live Connection (Local only) using unix socket
     LiveRpc = Live(
         req_method='unixsocket',
         path_to_socket_file='/path/to/unrealircd/data/rpc.socket',
         callback_object_instance=Callback_class_instance,
         callback_method_name='your_method_name'
     )
-
+```
+### Live connection (Local or Remote)
+```python
+    from unrealircd_rpc_py.Live import Live
     # Live Connection (Local Or Remote)
     liveRpc = Live(
         req_method='websocket',
@@ -60,7 +72,6 @@ If you are using Python3, this package can help you to parse all json responses 
         callback_object_instance=InitCallbackClass,
         callback_method_name='your_method_name'
     )
-
 ```
 ## How to work with (remotly)
 This package allows easy interfacing with UnrealIRCd through regular Python3 code, such as:
@@ -107,9 +118,17 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
         )
 
     # Enjoy the power of JSON-RPC
-
     User = rpc.User
     response = User.get('adator')
+    
+    # Handling errors
+    if rpc.get_error.code != 0:
+        # if code is not 0 then there is an error
+        print(f"Your Error Message: {rpc.get_error.message}")
+    
+    # You can also access errors like so:
+    if User.get_error.code != 0:
+        print(f"Your Error Message: {User.get_error.message}")
 
     print(f'Nickname: {response.name}')
     print(f'Ip: {response.ip}')
@@ -166,12 +185,12 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
 
     # This method will run forever and will send to your callback method the response
     # in SimpleNameSpace type that you can parse
-    if liveRpc.Error.code == 0:
+    if liveRpc.get_error.code == 0:
         # Subscribe to live events
         liveRpc.subscribe()
     else:
         # If error show the error message
-        print(liveRpc.Error.message)
+        print(liveRpc.get_error.message)
 ```
 ## How to work with (using Live websocket)
 ```python
@@ -193,12 +212,12 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
 
     # This method will run forever and will send to your callback method the response
     # in SimpleNameSpace type that you can parse
-    if liveRpc.Error.code == 0:
+    if liveRpc.get_error.code == 0:
         # Subscribe to live events
         liveRpc.subscribe()
     else:
         # If error show the error message
-        print(liveRpc.Error.message)
+        print(liveRpc.get_error.message)
 ```
 
 ## Exemple of a Callback Class

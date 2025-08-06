@@ -6,10 +6,10 @@ from unrealircd_rpc_py.Stats import Stats
 from unrealircd_rpc_py.Whowas import Whowas
 from unrealircd_rpc_py.Server import Server
 from unrealircd_rpc_py.Channel import Channel
-from unrealircd_rpc_py.Server_ban import Server_ban
-from unrealircd_rpc_py.Server_ban_exeption import Server_ban_exception
+from unrealircd_rpc_py.Server_ban import ServerBan
+from unrealircd_rpc_py.Server_ban_exeption import ServerBanException
 from unrealircd_rpc_py.Spamfilter import Spamfilter
-from unrealircd_rpc_py.Name_ban import Name_ban
+from unrealircd_rpc_py.Name_ban import NameBan
 from unrealircd_rpc_py.Rpc import Rpc
 from unrealircd_rpc_py.Log import Log
 
@@ -64,10 +64,6 @@ class Loader:
             debug_level=debug_level
         )
 
-        # Create ErrorModel Instance
-        self.Error = self.Connection.Error
-        """Access Error Object when there is an error"""
-
         # Create User Instance
         self.User: User = User(self.Connection)
         """The User module instance"""
@@ -77,15 +73,15 @@ class Loader:
         """The Server module instance"""
 
         # Create Server_ban Instance
-        self.Server_ban: Server_ban = Server_ban(self.Connection)
-        """The Server_ban module instance"""
+        self.Server_ban: ServerBan = ServerBan(self.Connection)
+        """The ServerBan module instance"""
 
         # Create Server_ban_exception Instance
-        self.Server_ban_exception: Server_ban_exception = Server_ban_exception(self.Connection)
-        """The Server_ban_exception module instance"""
+        self.Server_ban_exception: ServerBanException = ServerBanException(self.Connection)
+        """The ServerBanException module instance"""
 
         # Create Name_ban Instance
-        self.Name_ban: Name_ban = Name_ban(self.Connection)
+        self.Name_ban: NameBan = NameBan(self.Connection)
         """The Name_ban module instance"""
 
         # Create Rpc Instance

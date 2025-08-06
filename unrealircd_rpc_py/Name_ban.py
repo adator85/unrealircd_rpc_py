@@ -1,19 +1,14 @@
 from types import SimpleNamespace
+from typing import Union
+
 from unrealircd_rpc_py.Connection import Connection
 import unrealircd_rpc_py.Definition as Dfn
 
-class Name_ban:
+class NameBan:
 
     DB_NAME_BANS: list[Dfn.NameBan] = []
 
     def __init__(self, connection: Connection) -> None:
-
-        # Store the original response
-        self.response_raw: str
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
 
         # Get the Connection instance
         self.Connection = connection
@@ -23,6 +18,14 @@ class Name_ban:
     @property
     def get_error(self) -> Dfn.RPCError:
         return self.Error
+
+    @property
+    def get_response(self) -> Union[dict, None]:
+        return self.Connection.get_response()
+
+    @property
+    def get_response_np(self) -> Union[SimpleNamespace, None]:
+        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.NameBan]:
         """List name bans (qlines).
@@ -34,22 +37,19 @@ class Name_ban:
             self.DB_NAME_BANS = []
             self.Connection.EngineError.init_error()
 
-            response: dict = self.Connection.query(method='name_ban.list')
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='name_ban.list')
 
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+                return []
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.EngineError.set_error(**response["error"])
-                return False
+                return []
 
-            namebans: dict = response.get('result', {}).get('list', []) # ['result']['list']
+            namebans: list[dict] = response.get('result', {}).get('list', []) # ['result']['list']
 
             for nameban in namebans:
                 self.DB_NAME_BANS.append(
@@ -60,10 +60,12 @@ class Name_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return []
 
-    def get(self, name: str) -> Dfn.NameBan:
+    def get(self, name: str) -> Union[Dfn.NameBan, None]:
         """Retrieve all details of a single name ban (qline).
 
         Args:
@@ -75,31 +77,30 @@ class Name_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(method='name_ban.get', param={"name": name})
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
+            response: dict[str, dict] = self.Connection.query(method='name_ban.get', param={"name": name})
 
             if response is None:
                 self.Logs.error('Empty response')
                 self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+                return None
 
             if 'error' in response:
                 self.Logs.error(response['error']['message'])
                 self.Connection.EngineError.set_error(**response["error"])
-                return False
+                return None
 
             nameban = response['result']['tkl']
 
-            objectNameBan = Dfn.NameBan(**nameban)
+            obj = Dfn.NameBan(**nameban)
 
-            return objectNameBan
+            return obj
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return None
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return None
 
     def add(self, name: str, reason: str, set_by: str = None, expire_at: str = None, duration_string: str = None) -> bool:
         """Add a name ban (qline).
@@ -121,13 +122,10 @@ class Name_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='name_ban.add', 
                 param={"name": name, "reason": reason, "set_by": set_by, "expire_at": expire_at, "duration_string": duration_string}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -148,8 +146,10 @@ class Name_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
 
     def del_(self, name: str, set_by: str = None) -> bool:
         """Delete a name ban (LINE).
@@ -164,13 +164,10 @@ class Name_ban:
         try:
             self.Connection.EngineError.init_error()
 
-            response = self.Connection.query(
+            response: dict[str, dict] = self.Connection.query(
                 method='name_ban.del',
                 param={"name": name, 'set_by': set_by}
                 )
-
-            self.response_raw = response
-            self.response_np = self.Connection.json_response_np
 
             if response is None:
                 self.Logs.error('Empty response')
@@ -191,5 +188,7 @@ class Name_ban:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
+            return False
         except Exception as err:
             self.Logs.error(f'General error: {err}')
+            return False
