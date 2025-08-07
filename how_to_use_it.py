@@ -10,6 +10,10 @@ try:
             password='your-rpc-password'
         )
 
+    # Check if connection is correct
+    if rpc.get_error.code != 0:
+        print(f"You error message: {rpc.get_error.message}")
+
     # Use User object
     Users = rpc.User.list_()
 

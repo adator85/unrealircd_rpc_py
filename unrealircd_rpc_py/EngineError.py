@@ -30,3 +30,17 @@ class EngineError:
         """
         self.Error.code = code
         self.Error.message = message
+
+class InvalidUrlFormat(Exception):
+
+    def __init__(self, detail: str, returncode: int = -1):
+        self.returncode: int = returncode
+        detail = detail.strip()
+        super().__init__(detail)
+
+class UnixSocketFileNotFoundError(Exception):
+
+    def __init__(self, detail: str, returncode: int = -1):
+        self.returncode: int = returncode
+        detail = detail.strip()
+        super().__init__(detail)
