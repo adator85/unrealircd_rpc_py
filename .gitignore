@@ -3,6 +3,7 @@ build/*
 .env/*
 .idea/*
 *.egg-info/*
+dist/*
 tests/*
 docs/*
 setup.py
