@@ -125,7 +125,7 @@ class LiveWebsocket:
 
         Args:
             callback_object_instance (object): The callback class instance (could be "self" if the class is in the same class)
-            callback_method_name (str): The callback method name
+            callback_method_or_function_name (str): The callback method name
             url (str, optional): The full url to connect https://your.rpcjson.link:port/api.
             username (str, optional): Default to None
             password (str, optional): Default to None
@@ -170,16 +170,35 @@ class LiveWebsocket:
         Args:
             sources (list, optional): The ressources you want to subscribe. Defaults to ["!debug","all"].
         """
+        self.connected = True
         sources = ["!debug", "all"] if sources is None else sources
         asyncio.run(self.query('log.subscribe', param={"sources": sources}))
 
-    def unsubscribe(self):
-        """Run a del timer to trigger an event and then unsubscribe from the stream
+    def unsubscribe(self) -> bool:
+        """Disconnecting from the event stream!
+
+        Returns:
+            bool: True if disctonnected from the stream
         """
         self.connected = False
-        asyncio.run(
-            self.query(method='rpc.del_timer', param={"timer_id": "timer_impossible_to_find_as_i_am_not_a_teapot"}))
         asyncio.run(self.query(method='log.unsubscribe'))
+        response = self.get_response()
+
+        if isinstance(response.get('result'), bool):
+            self.Logs.debug(f'Disconnect from the JSONRPC Stream! Status: {"Disconnected" if response.get("result") else "Still connected!"}')
+
+            # Sending a log message to release the connection.
+            asyncio.run(self.query(method='log.send',
+                                   param={"msg":f"{self.username} JSONRPC User has been disconnected from the stream!",
+                                          "level":"info",
+                                          "subsystem":"connect",
+                                          "event_id": "REMOTE_CLIENT_DISCONNECT"}
+                                   )
+                        )
+            return response.get('result', False)
+
+        return False
+
 
     async def query(self, method: Union[Literal['log.subscribe', 'log.unsubscribe'], str],
                     param: Optional[dict] = None, query_id: int = 123,
