@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='unrealircd_rpc_py',
-    version='2.0.1',
+    version='2.0.2',
     packages=find_packages(exclude=["tests","test_*"]),
     install_requires=[
         "requests>=2.25.1",
@@ -18,9 +18,11 @@ setup(
         '': ['README.MD'],
     },
     classifiers=[
-        'Programming Language :: Python :: 3',
+        'Development Status :: 5 - Production/Stable',
+        'Programming Language :: Python :: 3.10',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent'
     ],
+    keywords="Unrealircd, irc, jsonrpc, json-rpc, ircd",
     python_requires='>=3.10'
 )
