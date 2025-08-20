@@ -43,7 +43,7 @@ class RPCError(MainModel):
 class LiveRPCError(MainModel):
     """This the Live JSONRPC Model Error"""
     jsonrpc: str = "2.0"
-    error: RPCError = field(default=RPCError())
+    error: RPCError = field(default_factory=RPCError())
     id: int = 123
 
 @dataclass
