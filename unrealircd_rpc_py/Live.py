@@ -109,10 +109,18 @@ def start_log_system(debug_level: int = 20) -> logging.Logger:
 
     return logger
 
-def convert_to_jsonrpc_result(result: dict) -> LiveRPCResult:
+def convert_to_jsonrpc_result(result: Union[dict, Any]) -> LiveRPCResult:
+
+    if not isinstance(result, dict):
+        raise TypeError("Invalid jsonrpc response!")
+
     return LiveRPCResult(**result)
 
-def convert_to_jsonrpc_error(error: dict) -> LiveRPCError:
+def convert_to_jsonrpc_error(error: Union[dict, Any]) -> LiveRPCError:
+
+    if not isinstance(error, dict):
+        raise TypeError("Invalid jsonrpc Error!")
+
     return LiveRPCError(**error)
 
 class LiveWebsocket:
@@ -165,6 +173,8 @@ class LiveWebsocket:
         self.password = password
         self.request: str = ''
         self.connected: bool = True
+
+        self.EngineError.init_error()
 
         try:
             self.host, self.endpoint, self.port = decompose_url(url)
@@ -281,7 +291,7 @@ class LiveWebsocket:
             return LiveRPCError(error=RPCError(code=-1, message=ae.__str__())).to_dict()
 
         except (KeyError, InvalidURI, InvalidHandshake, json.decoder.JSONDecodeError,
-                TimeoutError, OSError, Exception) as err:
+                TimeoutError, OSError, TypeError, Exception) as err:
             self.Logs.error(f"Websocket Error: {err}")
             self.Logs.error(f"Initial request: {self.request}")
             self.EngineError.set_error(code=-1, message=f'Websocket Error {err}')
@@ -291,8 +301,7 @@ class LiveWebsocket:
             if asyncio.iscoroutine(result):
                 await result
 
-            return LiveRPCError(error=RPCError(code=-1, message=err)).to_dict()
-
+            return error
 
     @property
     def get_error(self) -> RPCError:
@@ -360,29 +369,37 @@ class LiveUnixSocket:
             return
 
 
-    def subscribe(self, sources: Optional[list] = None):
+    async def subscribe(self, sources: Optional[list] = None) -> dict[str, Any]:
         """Subscribe to the rpc server stream
         sources exemple:
         \n ["!debug","all"] would give you all log messages except for debug messages
         see: https://www.unrealircd.org/docs/List_of_all_log_messages
+
         Args:
             sources (list, optional): The ressources you want to subscribe. Defaults to ["!debug","all"].
         """
+        self.connected = True
         sources = ["!debug", "all"] if sources is None else sources
-        asyncio.run(self.query('log.subscribe', param={"sources": sources}))
+        response = await self.query(method='log.subscribe', param={"sources": sources})
+        return response
 
-    def unsubscribe(self):
+    async def unsubscribe(self) -> dict[str, Any]:
         """Run a del timer to trigger an event and then unsubscribe from the stream
         """
-        self.connected = False
-        asyncio.run(
-            self.query(method='rpc.del_timer', param={"timer_id": "timer_impossible_to_find_as_i_am_not_a_teapot"}))
-        asyncio.run(self.query(method='log.unsubscribe'))
+        response = await self.query(method='log.unsubscribe')
+        await self.query(method='log.send',
+                         param={"msg": f"JSONRPC UnixSocket has been disconnected from the stream!",
+                                "level": "info",
+                                "subsystem": "connect",
+                                "event_id": "REMOTE_CLIENT_DISCONNECT"}
+                         )
+
+        return response
 
     async def query(self, method: Union[Literal['log.subscribe', 'log.unsubscribe'], str],
                     param: Optional[dict] = None, query_id: int = 123,
                     jsonrpc: str = '2.0'
-                    ) -> Union[dict, None]:
+                    ) -> dict[str, Any]:
         """This method will use to run the queries
 
         Args:
@@ -416,25 +433,27 @@ class LiveUnixSocket:
 
         self.request = json.dumps(response)
 
-        await asyncio.gather(self.__send_to_permanent_unixsocket())
+        response = await self.__send_to_permanent_unixsocket()
 
-        if self.get_response() == '' or self.get_response() is None:
-            return None
+        return response
 
-        return self.get_response()
-
-    async def __send_to_permanent_unixsocket(self):
+    async def __send_to_permanent_unixsocket(self) -> dict[str, Any]:
         sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
         try:
             sock.connect(self.path_to_socket_file)
 
             if not self.request:
-                return None
+                return {}
 
+            # Sending the request
             sock.sendall(f'{self.request}\r\n'.encode())
+
+            # Get the method
+            method = json.loads(self.request).get('method')
 
             # Init batch variable
             batch = b''
+            final_response: Optional[Union[LiveRPCResult, LiveRPCError]] = LiveRPCResult()
 
             while self.connected:
                 # Recieve the data from the rpc server, decode it and split it
@@ -450,59 +469,62 @@ class LiveUnixSocket:
                 # Decode and split the response
                 response = batch.decode().split("\n")
 
-                # Clean batch variable
-                batch = b''
+                if method == 'log.unsubscribe':
+                    self.connected = False
+                    final_response = LiveRPCError(error=RPCError(code=0, message="Websocket Normal Closure!"))
+
+                    # support callbacks async et sync
+                    result = self.to_run(dict_to_namespace(final_response.to_dict()))
+                    if asyncio.iscoroutine(result):
+                        await result
+
+                    break
 
                 for bdata in response:
                     if bdata:
-                        self.__set_responses(bdata)
-                        self.to_run(self.get_response_np())
+                        decoded_response = json.loads(bdata)
+
+                        if decoded_response.get('result', None):
+                            final_response = convert_to_jsonrpc_result(decoded_response)
+                        elif decoded_response.get('error', None):
+                            final_response = convert_to_jsonrpc_error(decoded_response)
+
+                        # support callbacks async et sync
+                        result = self.to_run(dict_to_namespace(final_response.to_dict()))
+                        if asyncio.iscoroutine(result):
+                            await result
+
+                # Clean batch variable
+                batch = b''
+
+                # Clean error
+                self.EngineError.init_error()
+
+            return final_response.to_dict()
 
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
             self.EngineError.set_error(code=-1, message=f'AF_UnixError: {attrerr}')
-        except TimeoutError as timeouterr:
-            self.Logs.critical(f'Timeout Error: {timeouterr}')
-            self.EngineError.set_error(code=-1, message=f'TimeoutError: {timeouterr}')
-        except OSError as oserr:
-            self.Logs.critical(f'OSError: {oserr}')
-            self.EngineError.set_error(code=-1, message=f'OSError: {oserr}')
-        except json.decoder.JSONDecodeError as jsondecoderror:
-            self.Logs.critical(f'JSONDecodeError: {jsondecoderror}')
-            self.EngineError.set_error(code=-1, message=f'JSONDecodeError: {jsondecoderror}')
-        except Exception as err:
-            self.Logs.error(f'General Error: {err}')
-            self.EngineError.set_error(code=-1, message=f'GeneralError: {err}')
+
+            error = LiveRPCError(error=RPCError(code=-1, message=attrerr.__str__())).to_dict()
+            result = self.to_run(dict_to_namespace(error))
+            if asyncio.iscoroutine(result):
+                await result
+
+            return error
+        except (TimeoutError, OSError, json.decoder.JSONDecodeError, TypeError, Exception) as err:
+            self.Logs.critical(f'UnixSocket Error: {err}')
+            self.EngineError.set_error(code=-1, message=f'UnixSocket Error: {err}')
+
+            error = LiveRPCError(error=RPCError(code=-1, message=err)).to_dict()
+            result = self.to_run(dict_to_namespace(error))
+            if asyncio.iscoroutine(result):
+                await result
+
+            return error
         finally:
             sock.close()
 
     @property
     def get_error(self) -> RPCError:
         return self.EngineError.Error
-
-    def __set_responses(self, response: str):
-        """Set response as dict and as simple name space"""
-        # Set dict response
-        self.__response_np: Optional[SimpleNamespace] = None
-        self.__response: Optional[dict] = None
-
-        if not response:
-            self.Logs.error(f"Impossible to load response: {response}")
-            return
-
-        self.__response = json.loads(response)
-
-        if not isinstance(self.__response, dict):
-            self.__response = None
-            self.__response_np = None
-            self.Logs.error(f"Impossible to load response: {response}")
-
-        # Set response name space
-        self.__response_np = dict_to_namespace(self.__response)
-
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.__response_np
-
-    def get_response(self) -> Union[dict, None]:
-        return self.__response
-
