@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field, asdict, fields
 from json import dumps
-from typing import Any
+from typing import Any, Optional
 from warnings import warn
 from functools import wraps
 
@@ -37,8 +37,22 @@ class MainModel:
 class RPCError(MainModel):
     """This model will contain the error if any"""
     code: int = 0
-    message: str = None
+    message: Optional[str] = None
 
+@dataclass
+class LiveRPCError(MainModel):
+    """This the Live JSONRPC Model Error"""
+    jsonrpc: str = "2.0"
+    error: RPCError = field(default=RPCError())
+    id: int = 123
+
+@dataclass
+class LiveRPCResult(MainModel):
+    """This the Live JSONRPC Model Result"""
+    jsonrpc: str = "2.0"
+    method: Optional[str] = None
+    result: Optional[Any] = None
+    id: int = 123
 
 @dataclass
 class Tls(MainModel):

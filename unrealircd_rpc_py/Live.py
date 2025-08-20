@@ -13,7 +13,7 @@ from types import SimpleNamespace
 from websockets.asyncio import client
 from websockets import InvalidURI, InvalidHandshake
 from unrealircd_rpc_py.EngineError import EngineError, InvalidUrlFormat, UnixSocketFileNotFoundError
-from unrealircd_rpc_py.Definition import RPCError
+from unrealircd_rpc_py.Definition import RPCError, LiveRPCError, LiveRPCResult
 
 def decompose_url(url: str) -> tuple[str, str, int]:
     """Check provided url if it follow the format
@@ -67,11 +67,30 @@ def verify_unix_socket_file(path_to_socket_file: str) -> bool:
 
     return True
 
+def remove_logger(logger_name: str) -> None:
+
+    # Get the logger name
+    logger = logging.getLogger(logger_name)
+
+    # Delete handlers from the gestionary and close them
+    for handler in logger.handlers[:]:  # Use a copy of the list
+        # print(handler)
+        logger.removeHandler(handler)
+        handler.close()
+
+    # Remove the logger from the dictionary
+    logging.Logger.manager.loggerDict.pop(logger_name, None)
+
+    return None
+
 def start_log_system(debug_level: int = 20) -> logging.Logger:
     """Init log system
     """
+    logger_name = 'unrealircd-liverpc-py'
+    remove_logger(logger_name)
+
     # Init logs object
-    logger: logging.Logger = logging.getLogger('unrealircd-liverpc-py')
+    logger: logging.Logger = logging.getLogger(logger_name)
     logger.setLevel(debug_level)
 
     # Add Handlers
@@ -90,6 +109,12 @@ def start_log_system(debug_level: int = 20) -> logging.Logger:
 
     return logger
 
+def convert_to_jsonrpc_result(result: dict) -> LiveRPCResult:
+    return LiveRPCResult(**result)
+
+def convert_to_jsonrpc_error(error: dict) -> LiveRPCError:
+    return LiveRPCError(**error)
+
 class LiveWebsocket:
 
     def __init__(self,
@@ -102,52 +127,46 @@ class LiveWebsocket:
                  ):
         """Initiate live connection to unrealircd
 
-        websocket:
+            websocket:
 
-        ```
-        If you use websocket you must have:
-            url: https://your.rpcjson.link:port/api
-            username: API_RPC_USERNAME
-            password: API_RPC_PASSWORD
-        ```
+            ```
+            If you use websocket you must have:
+                url: https://your.rpcjson.link:port/api
+                username: API_RPC_USERNAME
+                password: API_RPC_PASSWORD
+            ```
 
-        ## Exemples:
-        If you want to use websocket you need to provide 6 parameters:
-        ```python
-            Live(
-                callback_object_instance=YourCallbackClass,
-                callback_method_name='your_callback_methode_name',
-                url='https://your.rpcjson.link:8600/api',
-                userame='API_RPC_USERNAME',
-                password='API_RPC_PASSWORD'
-            )
-        ```
+            ## Exemples:
+            If you want to use websocket you need to provide 6 parameters:
+            ```python
+                Live(
+                    callback_object_instance=YourCallbackClass,
+                    callback_method_name='your_callback_methode_name',
+                    url='https://your.rpcjson.link:8600/api',
+                    userame='API_RPC_USERNAME',
+                    password='API_RPC_PASSWORD'
+                )
+            ```
 
-        Args:
-            callback_object_instance (object): The callback class instance (could be "self" if the class is in the same class)
-            callback_method_or_function_name (str): The callback method name
-            url (str, optional): The full url to connect https://your.rpcjson.link:port/api.
-            username (str, optional): Default to None
-            password (str, optional): Default to None
-            debug_level (str, optional): NOTSET=0 | DEBUG=10 | INFO=20 | WARN=30 | ERROR=40 | CRITICAL=50 - Default to 20
+            Args:
+                callback_object_instance (object): The callback class instance (could be "self" if the class is in the same class)
+                callback_method_or_function_name (str): The callback method name
+                url (str, optional): The full url to connect https://your.rpcjson.link:port/api.
+                username (str, optional): Default to None
+                password (str, optional): Default to None
+                debug_level (str, optional): NOTSET=0 | DEBUG=10 | INFO=20 | WARN=30 | ERROR=40 | CRITICAL=50 - Default to 20
         """
 
         self.Logs = start_log_system(debug_level)
-        """Starting logger system"""
-
         self.EngineError = EngineError()
-        """Engine Error: should be used to set errors"""
 
         self.url = url
         self.username = username
         self.password = password
         self.request: str = ''
         self.connected: bool = True
-        self.__response: Optional[dict] = {}
-        self.__response_np: Optional[SimpleNamespace] = SimpleNamespace()
 
         try:
-
             self.host, self.endpoint, self.port = decompose_url(url)
             self.to_run = getattr(callback_object_instance, callback_method_or_function_name)
             self.Logs.debug("Connexion Established using Live Websocket!")
@@ -162,175 +181,122 @@ class LiveWebsocket:
             self.Logs.critical(iuf)
             return
 
-    def subscribe(self, sources: Optional[list] = None):
-        """Subscribe to the rpc server stream
-        sources exemple:
-        \n ["!debug","all"] would give you all log messages except for debug messages
-        see: https://www.unrealircd.org/docs/List_of_all_log_messages
-        Args:
-            sources (list, optional): The ressources you want to subscribe. Defaults to ["!debug","all"].
-        """
+    # No more asyncio.run
+    async def subscribe(self, sources: Optional[list] = None) -> dict[str, Any]:
+        """Subscribe to the rpc server stream"""
         self.connected = True
         sources = ["!debug", "all"] if sources is None else sources
-        asyncio.run(self.query('log.subscribe', param={"sources": sources}))
+        response = await self.query('log.subscribe', param={"sources": sources})
+        return response
 
-    def unsubscribe(self) -> bool:
-        """Disconnecting from the event stream!
+    async def unsubscribe(self) -> dict[str, Any]:
+        """Unsubscribe from the rpc server stream"""
 
-        Returns:
-            bool: True if disctonnected from the stream
-        """
-        self.connected = False
-        asyncio.run(self.query(method='log.unsubscribe'))
-        response = self.get_response()
+        response = await self.query(method='log.unsubscribe')
 
-        if isinstance(response.get('result'), bool):
-            self.Logs.debug(f'Disconnect from the JSONRPC Stream! Status: {"Disconnected" if response.get("result") else "Still connected!"}')
+        await self.query(method='log.send',
+                         param={"msg": f"{self.username} JSONRPC User has been disconnected from the stream!",
+                                "level": "info",
+                                "subsystem": "connect",
+                                "event_id": "REMOTE_CLIENT_DISCONNECT"}
+                         )
 
-            # Sending a log message to release the connection.
-            asyncio.run(self.query(method='log.send',
-                                   param={"msg":f"{self.username} JSONRPC User has been disconnected from the stream!",
-                                          "level":"info",
-                                          "subsystem":"connect",
-                                          "event_id": "REMOTE_CLIENT_DISCONNECT"}
-                                   )
-                        )
-            return response.get('result', False)
-
-        return False
-
+        return response
 
     async def query(self, method: Union[Literal['log.subscribe', 'log.unsubscribe'], str],
                     param: Optional[dict] = None, query_id: int = 123,
                     jsonrpc: str = '2.0'
-                    ) -> Optional[dict]:
-        """This method will use to run the queries
+                    ) -> dict[str, Any]:
 
-        Args:
-            method (Union[Literal[&#39;stats.get&#39;, &#39;rpc.info&#39;,&#39;user.list&#39;], str]): The method to send to unrealircd
-            param (dict, optional): the paramaters to send to unrealircd. Defaults to {}.
-            query_id (int, optional): id of the request. Defaults to 123.
-            jsonrpc (str, optional): jsonrpc. Defaults to '2.0'.
-
-        Returns:
-            str: The correct response
-            None: no response from the server
-            bool: False if there is an error occured
-        """
-
-        # data = '{"jsonrpc": "2.0", "method": "stats.get", "params": {}, "id": 123}'
-        get_method = method
         get_param = {} if param is None else param
-
-        if query_id == 123:
-            rand = random.randint(1, 6000)
-            get_id = int(time.time()) + rand
-        else:
-            get_id = query_id
+        get_id = int(time.time()) + random.randint(1, 6000) if query_id == 123 else query_id
 
         response = {
             "jsonrpc": jsonrpc,
-            "method": get_method,
+            "method": method,
             "params": get_param,
             "id": get_id
         }
 
         self.request = json.dumps(response)
 
-        await asyncio.gather(self.__send_websocket())
+        response = await self.__send_websocket()
 
-        if self.get_response() == '' or self.get_response() is None:
-            return None
+        return response
 
-        return self.get_response()
-
-    async def __send_websocket(self):
+    async def __send_websocket(self) -> dict[str, Any]:
         """Connect using websockets"""
         try:
-
-            # Build credentials
             api_login = f'{self.username}:{self.password}'
             credentials = base64.b64encode(api_login.encode()).decode()
 
-            # Override headers
-            headers = {
-                'Authorization': f"Basic {credentials}"
-            }
+            headers = {'Authorization': f"Basic {credentials}"}
 
-            # Create an SSL context for wss
             sslctx = ssl.create_default_context()
             sslctx.check_hostname = False
             sslctx.verify_mode = ssl.CERT_NONE
 
             ws_uri = f'wss://{self.host}:{self.port}/'
+            method = json.loads(self.request).get('method')
+            final_response: Optional[Union[LiveRPCResult, LiveRPCError]] = LiveRPCResult()
 
             async with client.connect(uri=ws_uri, additional_headers=headers, ssl=sslctx) as ws:
                 await ws.send(self.request)
                 while self.connected:
-                    response = await ws.recv()
-                    decoded_response = json.dumps(response)
-                    self.__set_responses(json.loads(decoded_response))
-                    self.to_run(self.get_response_np())
+                    srv_response = await ws.recv()
+                    decoded_response: dict[str, Any] = json.loads(json.loads(json.dumps(srv_response)))
 
-        except KeyError as ke:
-            self.Logs.error(f"KeyError : {ke}")
+                    if decoded_response.get('result', None):
+                        final_response = convert_to_jsonrpc_result(decoded_response)
+
+                    if decoded_response.get('error', None):
+                        final_response = convert_to_jsonrpc_error(decoded_response)
+
+                    if method == 'log.unsubscribe':
+                        self.connected = False
+                        final_response = LiveRPCError(error=RPCError(code=0, message="Websocket Normal Closure!"))
+
+                    # support callbacks async et sync
+                    result = self.to_run(dict_to_namespace(final_response.to_dict()))
+                    if asyncio.iscoroutine(result):
+                        await result
+
+                    self.EngineError.init_error()
+
+            return final_response.to_dict()
+
+        except asyncio.CancelledError:
+            self.Logs.info("Websocket task cancelled, closing connection")
+            self.EngineError.set_error(code=-1, message='Websocket task cancelled!')
+            error = LiveRPCError(error=RPCError(code=-1, message="Websocket task cancelled, closing connection")).to_dict()
+            result = self.to_run(dict_to_namespace(error))
+            if asyncio.iscoroutine(result):
+                await result
+
+            return LiveRPCError(error=RPCError(code=-1, message="Websocket task cancelled, closing connection")).to_dict()
+
+        except AttributeError as ae:
+            self.Logs.critical(f"Attribute Error: {ae.__str__()} Check your callback function or method")
+            self.EngineError.set_error(code=-1, message='Attribute Error, Check your callback function or method!')
+            return LiveRPCError(error=RPCError(code=-1, message=ae.__str__())).to_dict()
+
+        except (KeyError, InvalidURI, InvalidHandshake, json.decoder.JSONDecodeError,
+                TimeoutError, OSError, Exception) as err:
+            self.Logs.error(f"Websocket Error: {err}")
             self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=ke.__str__())
-        except InvalidURI as URIError:
-            self.Logs.error(f"Invalid URI : {URIError}")
-            self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'Invalid URI {URIError}')
-        except InvalidHandshake as HandshakeError:
-            self.Logs.critical(f"Handshake Error : {HandshakeError}")
-            self.Logs.critical(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'InvalidHandshake: {HandshakeError}')
-        except json.decoder.JSONDecodeError as jsonerror:
-            self.Logs.error(f"jsonError {jsonerror}")
-            self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'Json Error: {jsonerror}')
-        except TimeoutError as te:
-            self.Logs.error(f"Timeout Error {te}")
-            self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'Timeout Error: {te}')
-        except OSError as oe:
-            self.Logs.error(f"OS Error {oe}")
-            self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'OS Error: {oe}')
-        except Exception as err:
-            self.Logs.error(f"General Error {err}")
-            self.Logs.error(f"Initial request: {self.request}")
-            self.EngineError.set_error(code=-1, message=f'General Error: {err}')
+            self.EngineError.set_error(code=-1, message=f'Websocket Error {err}')
+
+            error = LiveRPCError(error=RPCError(code=-1, message=err)).to_dict()
+            result = self.to_run(dict_to_namespace(error))
+            if asyncio.iscoroutine(result):
+                await result
+
+            return LiveRPCError(error=RPCError(code=-1, message=err)).to_dict()
+
 
     @property
     def get_error(self) -> RPCError:
         return self.EngineError.Error
-
-    def __set_responses(self, response: str):
-        """Set response as dict and as simple name space"""
-        # Set dict response
-        self.__response_np: Optional[SimpleNamespace] = None
-        self.__response: Optional[dict] = None
-
-        if not response:
-            self.Logs.error(f"Impossible to load response: {response}")
-            return
-
-        self.__response = json.loads(response)
-
-        if not isinstance(self.__response, dict):
-            self.__response = None
-            self.__response_np = None
-            self.Logs.error(f"Impossible to load response: {response}")
-
-        # Set response name space
-        self.__response_np = dict_to_namespace(self.__response)
-
-    def get_response_np(self) -> Optional[SimpleNamespace]:
-        return self.__response_np
-
-    def get_response(self) -> Optional[dict]:
-        return self.__response
-
 
 class LiveUnixSocket:
 
@@ -354,14 +320,14 @@ class LiveUnixSocket:
             Live(
                 req_method='unixsocket',
                 callback_object_instance=YourCallbackClass,
-                callback_method_name='your_callback_methode_name',
+                callback_method_or_function_name='your_callback_methode_name',
                 path_to_socket_file='/path/to/unrealircd/socket/your_socket.socket'
             )
         ```
 
         Args:
             callback_object_instance (object): The callback class instance (could be "self" if the class is in the same class)
-            callback_method_name (str): The callback method name
+            callback_method_or_function_name (str): The callback method name
             path_to_socket_file (str, optional): The full path to your unix socket file
             debug_level (str, optional): NOTSET=0 | DEBUG=10 | INFO=20 | WARN=30 | ERROR=40 | CRITICAL=50 - Default to 20
         """
