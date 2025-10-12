@@ -1,32 +1,21 @@
-from types import SimpleNamespace
-from typing import Union
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+from typing import TYPE_CHECKING
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
+
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class Whowas:
 
     DB_WHOWAS: list[Dfn.Whowas] = []
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
 
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
-
-    def get(self, nick:str = None, ip:str = None, object_detail_level:int = 2) -> list[Dfn.Whowas]:
+    def get(self, nick: str = None, ip: str = None, object_detail_level:int = 2) -> list[Dfn.Whowas]:
         """Get WHOWAS history of a user. 6.1.0+
 
         Args:
@@ -39,24 +28,16 @@ class Whowas:
         """
         try:
             self.DB_WHOWAS = []
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('whowas.get', param={'nick': nick, 'ip': ip, 'object_detail_level': object_detail_level})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return self.DB_WHOWAS
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_WHOWAS
-
-            whowass: list[dict] = response.get('result', {}).get('list', []) # ["result"]["list"]
+            whowass: list[dict] = response_model.result.get('result', {}).get('list', []) # ["result"]["list"]
 
             for whowas in whowass:
-
                 whowas_exclude_objs = whowas.copy()
                 whowas_exclude_objs.pop('user', None)
                 whowas_exclude_objs.pop('geoip', None)
@@ -68,12 +49,15 @@ class Whowas:
                         geoip=Dfn.Geoip(**whowas.get('geoip', Dfn.Geoip().to_dict()))
                     )
                 )
+            
+            if not whowass:
+                self.DB_WHOWAS.append(Dfn.Whowas(error=Dfn.RPCErrorModel(-1, "Empty response from whowas.get")))
 
             return self.DB_WHOWAS
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))

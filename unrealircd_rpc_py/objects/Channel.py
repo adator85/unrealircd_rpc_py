@@ -1,37 +1,19 @@
-from types import SimpleNamespace
-from typing import Union, Literal
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+from typing import TYPE_CHECKING, Literal
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
+
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class Channel:
 
     DB_CHANNELS: list[Dfn.Channel] = []
 
-    def __init__(self, connection: Connection) -> None:
-
-        # Store the original response
-        self.response_raw: str = ''
-        """Original response used to see available keys."""
-
-        self.response_np: SimpleNamespace
-        """Parsed JSON response providing access to all keys as attributes."""
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
-
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
 
     def list_(self, object_detail_level: Literal[0, 1, 2, 3, 4] = 1) -> list[Dfn.Channel]:
         """List channels.
@@ -48,21 +30,17 @@ class Channel:
         """
         try:
             self.DB_CHANNELS = []
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query(method='channel.list', param={'object_detail_level': object_detail_level})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_CHANNELS.append(
+                    Dfn.Channel(error=response_model.error)
+                )
                 return self.DB_CHANNELS
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_CHANNELS
-
-            channels: list[dict] = response['result']['list']
+            channels: list[dict] = response_model.result.get('list', [])
 
             for channel in channels:
                 channel_copy: dict = channel.copy()
@@ -84,12 +62,12 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return self.DB_CHANNELS
+            return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return self.DB_CHANNELS
+            return []
 
-    def get(self, channel: str, object_detail_level: int = 3) -> Union[Dfn.Channel, None]:
+    def get(self, channel: str, object_detail_level: int = 3) -> Dfn.Channel:
         """Retrieve all details of a single channel. 
         This returns more information than a channel.list call, see the end of Structure of a channel.
 
@@ -101,21 +79,14 @@ class Channel:
             Channel: The Channel Object, None if nothing see Error property
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(method='channel.get', param={'channel': channel, 'object_detail_level': object_detail_level})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.Channel(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            channel: dict = response.get('result', {}).get('channel', {})
+            channel: dict = response_model.result.get('channel', {})
 
             channel_copy: dict = channel.copy()
             for key in ['bans','ban_exemptions','invite_exceptions', 'members']:
@@ -161,12 +132,12 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.Channel(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.Channel(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_mode(self, channel: str, modes: str, parameters: str = "") -> bool:
+    def set_mode(self, channel: str, modes: str, parameters: str = "") -> Dfn.RPCResult:
         """Set and unset modes on a channel.
 
         Args:
@@ -178,35 +149,23 @@ class Channel:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query(method='channel.set_mode', param={"channel": channel,"modes": modes,"parameters": parameters})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_topic(self, channel: str, topic: str, set_by: str = None, set_at: str = None) -> bool:
+    def set_topic(self, channel: str, topic: str, set_by: str = None, set_at: str = None) -> Dfn.RPCResult:
         """Set a topic on a channel.
 
         Args:
@@ -219,35 +178,23 @@ class Channel:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query(method='channel.set_topic', param={"channel": channel, "topic": topic, "set_by": set_by, "set_at": set_at})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def kick(self, channel: str, nick: str, reason: str) -> bool:
+    def kick(self, channel: str, nick: str, reason: str) -> Dfn.RPCResult:
         """Kick a user from a channel
 
         Args:
@@ -259,30 +206,18 @@ class Channel:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query(method='channel.kick', param={"channel": channel, "nick": nick, "reason": reason})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))

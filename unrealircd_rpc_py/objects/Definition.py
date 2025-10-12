@@ -32,19 +32,36 @@ class MainModel:
         """Return a list of attributes name"""
         return [f.name for f in fields(self)]
 
+@dataclass
+class RPCErrorModel(MainModel):
+    code: int = 0
+    message: Optional[str] = None
 
 @dataclass
 class RPCError(MainModel):
     """This model will contain the error if any"""
-    code: int = 0
-    message: Optional[str] = None
+    """{"jsonrpc": "2.0", "method": "rpc.set_issuer", "id": 123, "error": {"code": -32602, "message": "Missing parameter: 'name'"}}"""
+    jsonrpc: str = "2.0"
+    method: Optional[str] = None
+    id: int = 123
+    error: RPCErrorModel = field(default=RPCErrorModel())
+
+@dataclass
+class RPCResult(MainModel):
+    """This the JSONRPC Model Result"""
+    jsonrpc: str = "2.0"
+    method: Optional[str] = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
+    result: Optional[Any] = None
+    id: int = 123
 
 @dataclass
 class LiveRPCError(MainModel):
     """This the Live JSONRPC Model Error"""
     jsonrpc: str = "2.0"
-    error: RPCError = field(default_factory=RPCError())
+    method: Optional[str] = None
     id: int = 123
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class LiveRPCResult(MainModel):
@@ -52,6 +69,7 @@ class LiveRPCResult(MainModel):
     jsonrpc: str = "2.0"
     method: Optional[str] = None
     result: Optional[Any] = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
     id: int = 123
 
 @dataclass
@@ -122,6 +140,7 @@ class Client(MainModel):
     idle_since: str = None
     tls: Tls = field(default_factory=Tls)
     user: User = field(default_factory=User)
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 
 #################
@@ -139,6 +158,7 @@ class ServerModule(MainModel):
     third_party: bool = False
     permanent: bool = False
     permanent_but_reloadable: bool = False
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class ServerRehashClient(MainModel):
@@ -191,6 +211,7 @@ class ServerRehash(MainModel):
     rehash_client: ServerRehashClient = field(default_factory=ServerRehashClient)
     log: list[ServerRehashLog] = field(default_factory=list[ServerRehashLog])
     success: str = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class ServerRpcModules(MainModel):
@@ -251,6 +272,7 @@ class ClientServer(MainModel):
     idle_since: str = None
     server: Server = field(default_factory=Server)
     tls: Tls = field(default_factory=Tls)
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 #################
 # Channel Class #
@@ -325,6 +347,7 @@ class Channel(MainModel):
     ban_exemptions: list[ChannelBanExemptions] = field(default_factory=list[ChannelBanExemptions])
     invite_exceptions: list[ChannelInviteExceptions] = field(default_factory=list[ChannelInviteExceptions])
     members: list[ChannelMembers] = field(default_factory=list[ChannelMembers])
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class NameBan(MainModel):
@@ -341,6 +364,7 @@ class NameBan(MainModel):
     set_in_config: bool = False
     name: str = None
     reason: str = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class ServerBan(MainModel):
@@ -357,6 +381,7 @@ class ServerBan(MainModel):
     set_in_config: bool = False
     name: str = None
     reason: str = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class ServerBanException(MainModel):
@@ -374,6 +399,7 @@ class ServerBanException(MainModel):
     name: str = None
     reason: str = None
     exception_types: str = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class Spamfilter(MainModel):
@@ -397,6 +423,7 @@ class Spamfilter(MainModel):
     reason: str = None
     hits: int = 0
     hits_except: int = 0
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 @dataclass
 class RpcInfo(MainModel):
@@ -404,6 +431,7 @@ class RpcInfo(MainModel):
     name: str = None
     module: str = None
     version: str = None
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 #################
 #  Stats Class  #
@@ -466,10 +494,11 @@ class Stats(MainModel):
         4- StatsServerBan
         ```
     """
-    server: StatsServer = field(default_factory=StatsServer)
-    user: StatsUser = field(default_factory=StatsUser)
-    channel: StatsChannel = field(default_factory=StatsChannel)
-    server_ban: StatsServerBan = field(default_factory=StatsServerBan)
+    server: StatsServer = field(default=StatsServer())
+    user: StatsUser = field(default=StatsUser())
+    channel: StatsChannel = field(default=StatsChannel())
+    server_ban: StatsServerBan = field(default=StatsServerBan())
+    error: RPCErrorModel = field(default=RPCErrorModel())
 
 ##################
 #  Whowas Class  #
@@ -481,7 +510,7 @@ class WhowasUser(MainModel):
     realname: str = None
     vhost: str = None
     servername: str = None
-    account: str = None
+    account: str = None  
 
 @dataclass
 class Whowas(MainModel):
@@ -501,5 +530,6 @@ class Whowas(MainModel):
     ip: str = None
     details: str = None
     connected_since: str = None
-    user: WhowasUser = field(default_factory=WhowasUser)
-    geoip: Geoip = field(default_factory=Geoip)
+    user: WhowasUser = field(default=WhowasUser())
+    geoip: Geoip = field(default=Geoip())
+    error: RPCErrorModel = field(default=RPCErrorModel())    
