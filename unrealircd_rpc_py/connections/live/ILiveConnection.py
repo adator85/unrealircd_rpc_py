@@ -39,6 +39,7 @@ class ILiveConnection(ABC):
         Raises:
             RpcConnectionError: RCP Connection Error related to credentials.
             RpcInvalidUrlFormat: Invalid url.
+            RpcSetupError: When connect method is called before setup method.
         """
         pass
 
