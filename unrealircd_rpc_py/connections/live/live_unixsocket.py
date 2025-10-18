@@ -6,7 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING, Literal, Union, Optional
 from unrealircd_rpc_py.objects.Definition import LiveRPCResult, RPCErrorModel
 from unrealircd_rpc_py.connections.live.ILiveConnection import ILiveConnection
-from unrealircd_rpc_py.connections.exceptions.rpc_exceptions import RpcConnectionError, RpcUnixSocketFileNotFoundError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError, RpcUnixSocketFileNotFoundError
 from unrealircd_rpc_py.utils import utils
 
 if TYPE_CHECKING:

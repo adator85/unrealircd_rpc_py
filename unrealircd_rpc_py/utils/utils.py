@@ -5,7 +5,7 @@ from re import match
 from types import SimpleNamespace
 from typing import Any, Optional, Union
 import unrealircd_rpc_py.objects.Definition as Dfn
-from unrealircd_rpc_py.connections.exceptions.rpc_exceptions import RpcInvalidUrlFormat, RpcUnixSocketFileNotFoundError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcInvalidUrlFormat, RpcUnixSocketFileNotFoundError
 
 def check_unix_socket_file(path_to_socket_file: str) -> bool:
     """Check provided full path to socket file if it exist

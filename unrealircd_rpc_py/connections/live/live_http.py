@@ -12,7 +12,7 @@ from websockets.asyncio import client
 from websockets import InvalidURI, InvalidHandshake
 from unrealircd_rpc_py.objects.Definition import LiveRPCResult, RPCErrorModel
 from unrealircd_rpc_py.connections.live.ILiveConnection import ILiveConnection
-from unrealircd_rpc_py.connections.exceptions.rpc_exceptions import RpcConnectionError, RpcInvalidUrlFormat
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError, RpcInvalidUrlFormat
 from unrealircd_rpc_py.utils import utils
 
 if TYPE_CHECKING:
@@ -71,7 +71,7 @@ class LiveWebsocket(ILiveConnection):
         test = self.establish_first_connection()
         if test.error.code != 0:
             self.Logs.error(f"Connexion failed to the server: {test.error.message} ({test.error.code})")
-            raise Exception(f"{test.error.message} ({test.error.code})")
+            raise RpcConnectionError(f"{test.error.message} ({test.error.code})")
 
         try:
             self.host, self.endpoint, self.port = utils.decompose_url(self.url)
@@ -95,13 +95,13 @@ class LiveWebsocket(ILiveConnection):
     def establish_first_connection(self) -> LiveRPCResult:
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
-            return None
+            return LiveRPCResult(result=False, error=RPCErrorModel(-1, 'You must call "setup" method before anything.'))
 
         url_info = utils.check_url(self.url)
 
         if url_info is None:
             self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
-            return None
+            return LiveRPCResult(result=False, error=RPCErrorModel(-1, 'You must provide the url in this format: https://your.rpcjson.link:port/api'))
 
         verify = False
         url: Optional[str] = self.url

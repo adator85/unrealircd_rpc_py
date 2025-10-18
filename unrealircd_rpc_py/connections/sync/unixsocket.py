@@ -7,7 +7,7 @@ import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Optional
 from re import findall
-from unrealircd_rpc_py.connections.exceptions.rpc_exceptions import RpcConnectionError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError
 from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Name_ban import NameBan
 from unrealircd_rpc_py.objects.Server import Server

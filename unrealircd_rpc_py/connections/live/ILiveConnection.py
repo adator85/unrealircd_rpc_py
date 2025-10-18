@@ -11,7 +11,7 @@ class ILiveConnection(ABC):
         self.Logs: Logger
 
     @abstractmethod
-    def setup(self, params: dict) -> Dfn.LiveRPCResult:
+    def setup(self, params: dict) -> None:
         """Setup the connection by providing credentials or The path to the socket file
 
         Args:

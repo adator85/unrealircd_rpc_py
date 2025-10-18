@@ -66,7 +66,7 @@ class IConnection(ABC):
         """The Spamfilter module instance"""
 
     @abstractmethod
-    def setup(self, params: dict) -> Optional[Dfn.RPCResult]:
+    def setup(self, params: dict) -> None:
         """Setup the connection by providing credentials or The path to the socket file
 
         Args:

@@ -1,7 +1,7 @@
 '''
 Docstring for unrealircd_rpc_py.connections.ConnectionFactory
 '''
-from unrealircd_rpc_py.connections.exceptions.rpc_exceptions import RpcProtocolError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcProtocolError
 from unrealircd_rpc_py.connections.live.live_unixsocket import LiveUnixSocket
 from unrealircd_rpc_py.connections.live.live_http import LiveWebsocket
 from unrealircd_rpc_py.connections.live.ILiveConnection import ILiveConnection

@@ -1,18 +1,15 @@
-from unrealircd_rpc_py.Loader import Loader
+from unrealircd_rpc_py.ConnectionFactory import ConnectionFactory
 
 try:
 
-    # Init
-    rpc = Loader(
-            req_method='requests',
-            url='https://your.rpc.link:PORT/api',
-            username='Your-rpc-user',
-            password='your-rpc-password'
-        )
-
-    # Check if connection is correct
-    if rpc.get_error.code != 0:
-        print(f"You error message: {rpc.get_error.message}")
+    # Init, Setup and connect
+    rpc = ConnectionFactory(debug_level=10).get('http')
+    check = rpc.setup({
+        'url':'https://your.rpc.link:PORT/api',
+        'username':'Your-rpc-user',
+        'password':'your-rpc-password'
+    })
+    # If errors it will raise RpcConnectionError
 
     # Use User object
     Users = rpc.User.list_()
@@ -31,12 +28,11 @@ try:
     lkp_chan = rpc.Channel.get('#welcome')
     print(lkp_chan.name, lkp_chan.topic, lkp_chan.num_users, sep=' / ')
 
-    Server = rpc.Server.module_list('001')
-    if Server is None:
-        print(rpc.Server.Error.message)
-    else:
-        for mod in Server:
-            print(mod.name)
+    Servers = rpc.Server.module_list('001')
+    for server in Servers:
+        if server.error.code != 0:
+            print(f"{server.error.message} ({server.error.code})")
+            break
 
 except AttributeError as ae:
     print(ae)
