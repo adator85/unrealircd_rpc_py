@@ -69,8 +69,28 @@ class IConnection(ABC):
     def setup(self, params: dict) -> None:
         """Setup the connection by providing credentials or The path to the socket file
 
+        Exemple Method WebSocket (http):
+        ```python
+            {
+                'url': 'https://your.rpc.link:PORT/api',
+                'username': 'Your-rpc-username',
+                'password': 'Your-rpc-password'
+            }
+        ```
+
+        Exemple Method UnixSocket (unixsocket):
+        ```python
+            {
+                'path_to_socket_file': '/path/to/unrealircd/data/rpc.socket'
+            }
+        ```
         Args:
             params (dict): The params
+
+        Raises:
+            RpcConnectionError: RCP Connection Error related to credentials.
+            RpcSetupError: When Connect method is called before setup method.
+            RpcInvalidUrlFormat: When the url format is not valid.
         """
         pass
 

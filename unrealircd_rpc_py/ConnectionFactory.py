@@ -19,4 +19,4 @@ class ConnectionFactory:
             case 'http':
                 return HttpConnection(self.debug_level)
             case _:
-                raise RpcProtocolError('Invalid method!')
+                raise RpcProtocolError(f'({connection}) is an invalid method! choose http or unixsocket instead!')

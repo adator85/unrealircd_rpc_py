@@ -8,7 +8,7 @@ import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Optional
 from requests.auth import HTTPBasicAuth
-from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError, RpcSetupError, RpcInvalidUrlFormat
 from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Name_ban import NameBan
 from unrealircd_rpc_py.objects.Server import Server
@@ -98,6 +98,7 @@ class HttpConnection(IConnection):
 
     def connect(self) -> None:
         if not self.is_setup:
+            self.Logs.critical('You must call "setup" method before anything.')
             raise RpcConnectionError('The "setup" method must be executed before "connect" method.', -1)
 
     def query(self,
@@ -197,13 +198,13 @@ class HttpConnection(IConnection):
     def establish_first_connection(self) -> Dfn.RPCResult:
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
-            return None
+            raise RpcSetupError('You must call "setup" method before anything.')
 
         url_info = utils.check_url(self.url)
 
         if url_info is None:
             self.Logs.critical('You must provide the url in this format: https://your.rpcjson.link:port/api')
-            return None
+            raise RpcInvalidUrlFormat('You must provide the url in this format: https://your.rpcjson.link:port/api')
 
         verify = False
         url: Optional[str] = self.url

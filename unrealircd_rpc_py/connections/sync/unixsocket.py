@@ -7,7 +7,7 @@ import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Optional
 from re import findall
-from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError, RpcSetupError, RpcUnixSocketFileNotFoundError
 from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Name_ban import NameBan
 from unrealircd_rpc_py.objects.Server import Server
@@ -95,6 +95,7 @@ class UnixSocketConnection(IConnection):
 
     def connect(self) -> None:
         if not self.is_setup:
+            self.Logs.critical('You must call "setup" method before anything.')
             raise RpcConnectionError('The "setup" method must be executed before "connect" method.', -1)
 
     def query(self,
@@ -187,12 +188,12 @@ class UnixSocketConnection(IConnection):
     def establish_first_connection(self) -> Dfn.RPCResult:
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
-            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, 'You must call "setup" method before anything.'))
+            raise RpcSetupError('You must call "setup" method before anything.')
 
         if not utils.check_unix_socket_file(self.path_to_socket_file):
             error_msg = 'The Path to your socket file is empty or wrong? please be sure that you are providing the correct socket path'
             self.Logs.error(error_msg)
-            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, error_msg))
+            return RpcUnixSocketFileNotFoundError(error_msg)
         
         return Dfn.RPCResult(result=True)
 

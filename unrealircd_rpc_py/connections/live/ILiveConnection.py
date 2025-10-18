@@ -14,14 +14,37 @@ class ILiveConnection(ABC):
     def setup(self, params: dict) -> None:
         """Setup the connection by providing credentials or The path to the socket file
 
+        Exemple Method WebSocket (http):
+        ```python
+            {
+                'url': 'https://your.rpc.link:PORT/api',
+                'username': 'Your-rpc-username',
+                'password': 'Your-rpc-password',
+                'callback_object_instance' : THE_CLASS_INSTANCE,
+                'callback_method_or_function_name': 'callback_method_name'
+            }
+        ```
+
+        Exemple Method UnixSocket (unixsocket):
+        ```python
+            {
+                'path_to_socket_file': '/path/to/unrealircd/data/rpc.socket',
+                'callback_object_instance' : THE_CLASS_INSTANCE,
+                'callback_method_or_function_name': 'callback_method_name'
+            }
+        ```
         Args:
             params (dict): The params
+
+        Raises:
+            RpcConnectionError: RCP Connection Error related to credentials.
+            RpcInvalidUrlFormat: Invalid url.
         """
         pass
 
     @abstractmethod
     def connect(self) -> None:
-        """_summary_
+        """Perform some actions to simulate connection.
         """
         pass
 

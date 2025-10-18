@@ -84,7 +84,7 @@ class LiveWebsocket(ILiveConnection):
 
         except RpcInvalidUrlFormat as iuf:
             self.Logs.critical(iuf)
-            raise Exception(f'RpcInvalidUrlFormat: {iuf}')
+            raise RpcInvalidUrlFormat(f'RpcInvalidUrlFormat: {iuf}')
 
         self.connect()
 
@@ -95,7 +95,7 @@ class LiveWebsocket(ILiveConnection):
     def establish_first_connection(self) -> LiveRPCResult:
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
-            return LiveRPCResult(result=False, error=RPCErrorModel(-1, 'You must call "setup" method before anything.'))
+            raise RpcConnectionError('The "setup" method must be executed before "connect" method.', -1)
 
         url_info = utils.check_url(self.url)
 
