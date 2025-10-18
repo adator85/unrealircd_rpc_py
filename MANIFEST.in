@@ -1,2 +1,3 @@
 include README.MD
-prune tests
+prune tests/
+exclude /tests/*
