@@ -1,30 +1,19 @@
-from types import SimpleNamespace
-from typing import Union
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+from typing import TYPE_CHECKING
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
+
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class ServerBan:
 
     DB_SERVERS_BANS: list[Dfn.ServerBan] = []
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
-
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.ServerBan]:
         """List server bans (LINEs).
@@ -33,22 +22,18 @@ class ServerBan:
             list[ServerBan]: List of ServerBan, if empty see Error Object
         """
         try:
-            self.Connection.EngineError.init_error()
             self.DB_SERVERS_BANS = []
-
             response:dict[str, dict] = self.Connection.query(method='server_ban.list')
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_SERVERS_BANS.append(
+                    Dfn.ServerBan(error=response_model.error)
+                )
                 return self.DB_SERVERS_BANS
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_SERVERS_BANS
-
-            srvbans:list[dict] = response.get('result', {}).get('list', [])
+            srvbans:list[dict] = response_model.result.get('list', [])
 
             for srvban in srvbans:
                 self.DB_SERVERS_BANS.append(Dfn.ServerBan(**srvban))
@@ -62,7 +47,7 @@ class ServerBan:
             self.Logs.error(f'General error: {err}')
             return []
 
-    def get(self, query_type: str, name: str) -> Union[Dfn.ServerBan, None]:
+    def get(self, query_type: str, name: str) -> Dfn.ServerBan:
         """Retrieve all details of a single server ban (LINE).
 
         Args:
@@ -70,24 +55,17 @@ class ServerBan:
             name (str): The target of the ban or except. For Spamfilter this is the regex/matcher.
 
         Returns:
-            ServerBan (ServerBan): The model Object | If None see the Error Attribut
+            ServerBan (ServerBan): The ServerBan model Object
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query(method='server_ban.get', param={'type': query_type, 'name': name})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.ServerBan(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            srvban: dict = response.get('result', {}).get('tkl', {})
+            srvban: dict = response_model.result.get('tkl', {})
 
             obj = Dfn.ServerBan(**srvban)
 
@@ -95,13 +73,13 @@ class ServerBan:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def add(self, query_type: str, name: str, reason: str, expire_at: str,
-            duration_sting: str, set_by: str = None) -> bool:
+            duration_sting: str, set_by: str = None) -> Dfn.RPCResult:
         """Add a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -117,42 +95,30 @@ class ServerBan:
             set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
 
         Returns:
-            bool: True if success
+            RPCResult: The RPCResult Model
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(method='server_ban.add',
                                              param={"type": query_type, "name": name, "reason": reason,
                                                     "expire_at": expire_at, "duration_string": duration_sting,
                                                     'set_by': set_by}
                                              )
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.ServerBan(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def del_(self, query_type: str, name: str, set_by: str = None) -> bool:
+    def del_(self, query_type: str, name: str, set_by: str = None) -> Dfn.RPCResult:
         """Delete a server ban (LINE).
 
         Mandatory arguments (see structure of a server ban for an explanation of the fields):
@@ -165,34 +131,22 @@ class ServerBan:
             set_by (str, optional): Name of the person or server who set the ban. Defaults to None.
 
         Returns:
-            bool: True if success
+            RPCResult: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(method='server_ban.del',
                                              param={"type": query_type, "name": name, 'set_by': set_by})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.ServerBan(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))

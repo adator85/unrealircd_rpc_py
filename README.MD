@@ -20,34 +20,31 @@ If you are using Python3, this package can help you to parse all json responses 
 ## How to establish the link
 ### Using requests module
 ```python
-    from unrealircd_rpc_py.Loader import Loader
-    # Using requests method
-    rpc = Loader(
-            req_method='requests',
-            url='https://your.irc.domaine.org:8600/api',
-            username='apiname',
-            password='apiPASSWORD'
-        )
-```
-### Using socket method
-```python
-    from unrealircd_rpc_py.Loader import Loader
-    # Using socket method
-    rpc = Loader(
-            req_method='socket',
-            url='https://your.irc.domaine.org:8600/api',
-            username='apiname',
-            password='apiPASSWORD'
-        )
+    from unrealircd_rpc_py.ConnectionFactory import ConnectionFactory
+
+    # Define your connection string
+    connection_string = {
+        'url': 'https://your.irc.domaine.org:8600/api',
+        'username':'API_USERNAME',
+        'password':'API_PASSWORD'
+    }
+
+    # Use the factory to create your connection object
+    conn = ConnectionFactory(debug_level=10).get('http')
+    conn.setup(connection_string)
 ```
 ### Using unixsocket method (Local only)
 ```python
-    from unrealircd_rpc_py.Loader import Loader
-    # Using unixsocket method (Local only)
-    rpc = Loader(
-            req_method='unixsocket',
-            path_to_socket_file='/path/to/unrealircd/data/rpc.socket'
-        )
+    from unrealircd_rpc_py.ConnectionFactory import ConnectionFactory
+
+    # Define your connection string
+    connection_string = {
+        'path_to_socket_file': '/path/to/unrealircd/data/rpc.socket'
+        }
+
+    # Use the factory to create your connection object
+    conn = ConnectionFactory(debug_level=10).get('unixsocket')
+    conn.setup(connection_string)
 ```
 ### Live Connection using UnixSocket (Local Only)
 ```python

@@ -1,31 +1,20 @@
-from types import SimpleNamespace
-from typing import Union
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+from typing import TYPE_CHECKING
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
+
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class Server:
 
     DB_SERVER: list[Dfn.ClientServer] = []
     DB_MODULES: list[Dfn.ServerModule] = []
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
-
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.ClientServer]:
         """List servers.
@@ -34,22 +23,18 @@ class Server:
             list[ClientServer]: List with an object contains all Servers information
         """
         try:
-            self.Connection.EngineError.init_error()
             self.DB_SERVER = []
-
             response: dict[str, dict] = self.Connection.query('server.list')
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return []
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_SERVER.append(
+                    Dfn.ClientServer(error=response_model.error)
+                )
+                return self.DB_SERVER
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return []
-
-            servers = response['result']['list']
+            servers: list[dict] = response_model.result.get('list', [])
 
             for server in servers:
                 client_server: dict = server.copy()
@@ -92,7 +77,7 @@ class Server:
             self.Logs.error(f'General error: {err}')
             return []
 
-    def get(self, serverorsid: str = None) -> Union[Dfn.ClientServer, None]:
+    def get(self, serverorsid: str = None) -> Dfn.ClientServer:
         """Retrieve all details of a single server.
 
         Args:
@@ -102,21 +87,14 @@ class Server:
             ClientServer (ClientServer, None): The ClientServer if success | None if error
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query('server.get', {'server': serverorsid})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.ClientServer(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            server = response['result']['server']
+            server: dict = response_model.result.get('server', {})
 
             client_server: dict = server.copy()
             server_for_client_server: dict = server.get('server', {}).copy()
@@ -151,12 +129,12 @@ class Server:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.ClientServer(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.ClientServer(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def rehash(self, serverorsid: str = None) -> Union[Dfn.ServerRehash, None]:
+    def rehash(self, serverorsid: str = None) -> Dfn.ServerRehash:
         """Rehash the server.
 
         IMPORTANT: If all servers on your network have rpc.modules.default.conf included then this can return an object with full rehash details.
@@ -169,21 +147,14 @@ class Server:
             ServerRehash: True if success or False if failed
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query('server.rehash', {'server': serverorsid})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.ClientServer(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            rehash: dict = response['result']
+            rehash: dict = response_model.result
 
             rehash_log: list[dict] = rehash.get('log', []).copy()
 
@@ -209,15 +180,15 @@ class Server:
 
         except TypeError as te:
             self.Logs.error(f'Type Error: {te}')
-            return None
+            return Dfn.ServerRehash(error=Dfn.RPCErrorModel(-1, te.__str__()))
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.ServerRehash(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General Error: {err}')
-            return None
+            return Dfn.ServerRehash(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def connect(self, link: str) -> bool:
+    def connect(self, link: str) -> Dfn.RPCResult:
         """Make server link (connect) to another server.
 
         Right now you can only tell to link to servers from the directly connected server 
@@ -231,30 +202,23 @@ class Server:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query('server.connect', {'link': link})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def disconnect(self, link: str) -> bool:
+    def disconnect(self, link: str) -> Dfn.RPCResult:
         """Terminate a server link (disconnect).
 
         This works for both directly connected servers and remote servers further up the network.
@@ -266,28 +230,21 @@ class Server:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query('server.disconnect', {'link': link})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def module_list(self, serverorsid: str = None) -> list[Dfn.ServerModule]:
         """Get the module list (list of loaded modules) on a server.
@@ -303,21 +260,17 @@ class Server:
         """
         try:
             self.DB_MODULES = []
-            self.Connection.EngineError.init_error()
-
             response:dict[str, dict] = self.Connection.query('server.module_list', {'server': serverorsid})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_MODULES.append(
+                    Dfn.ServerModule(error=response_model.error)
+                )
                 return self.DB_MODULES
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_MODULES
-
-            modules = response['result']['list']
+            modules: list = response_model.result.get('list', [])
 
             for module in modules:
                 self.DB_MODULES.append(Dfn.ServerModule(**module))

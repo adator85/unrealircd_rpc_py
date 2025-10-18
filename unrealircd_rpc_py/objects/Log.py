@@ -1,67 +1,51 @@
+import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
-from typing import Union, Literal, Optional
+from typing import Union, Literal, Optional, TYPE_CHECKING
 from time import time
-from unrealircd_rpc_py.Connection import Connection
-from unrealircd_rpc_py.Definition import RPCError
+from unrealircd_rpc_py.utils import utils
 
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class Log:
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
 
-    @property
-    def get_error(self) -> RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
-
-    def list_(self, sources: Optional[list] = None) -> Union[SimpleNamespace, None]:
+    def list_(self, sources: Optional[list] = None) -> Union[SimpleNamespace, Dfn.RPCResult]:
         """Fetch past log entries (since boot).
 
         Returns:
             list[ModelNameBan]: List of ModelNameBan, None if nothing or Error see the property
         """
         try:
-            self.Connection.EngineError.init_error()
 
             response: dict[str, dict] = self.Connection.query(
                 method='log.list', 
                 param={"sources": sources}
                 )
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            response_model = utils.construct_rpc_response(response)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            return self.get_response_np
+            return utils.dict_to_namespace(response)
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def send(self, msg: str, level: Literal['debug','info','warn','error','fatal'],
              subsystem: str, event_id: str, timestamp: float = time()
-             ) -> bool:
+             ) -> Dfn.RPCResult:
         """ Send a log message / server notice.
 
         Requires UnrealIRCd 6.1.8 or later
@@ -78,25 +62,22 @@ class Log:
         """
         # waiting for the documentation.
         try:
-            self.Connection.EngineError.init_error()
-
             response = self.Connection.query(
                     method='log.send',
                     param={"msg": msg, "level": level, "subsystem": subsystem, "event_id": event_id, "timestamp": timestamp}
                     )
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
+            response_model = utils.construct_rpc_response(response)
 
-            self.Logs.debug(response)
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))

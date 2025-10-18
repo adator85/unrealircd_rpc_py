@@ -1,31 +1,20 @@
-from types import SimpleNamespace
-from typing import Union, Literal
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+from cgitb import reset
+from typing import TYPE_CHECKING, Literal
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
 
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class User:
 
     DB_USER: list[Dfn.Client] = []
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
-
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
 
     def list_(self, object_detail_level: Literal[0, 1, 2, 4] = 2) -> list[Dfn.Client]:
         """List users
@@ -38,21 +27,17 @@ class User:
         """
         try:
             self.DB_USER = []
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.list', param={'object_detail_level': object_detail_level})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_USER.append(
+                    Dfn.Client(error=response_model.error)
+                )
                 return self.DB_USER
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return self.DB_USER
-
-            users:list[dict] = response.get('result', {}).get('list', []) # response['result']['list']
+            users: list[dict] = response_model.result.get('list', [])
 
             for user in users:
                 user_for_client = user.copy()
@@ -83,14 +68,12 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            self.Connection.EngineError.set_error(code=-3,message=ke)
             return []
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            self.Connection.EngineError.set_error(code=-3,message=err)
             return []
 
-    def get(self, nickoruid: str) -> Union[Dfn.Client, None]:
+    def get(self, nickoruid: str) -> Dfn.Client:
         """Get user information
 
         Args:
@@ -100,21 +83,14 @@ class User:
             Client (Client): The object Client
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.get', {'nick': nickoruid})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.Client(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            user:dict[str, dict] = response.get('result', {}).get('client', {}) # response['result']['client']
+            user: dict[str, dict] = response_model.result.get('client', {})
 
             user_for_client = user.copy()
             user_for_user: dict = user.get('user', {}).copy()
@@ -142,12 +118,12 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.Client(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.Client(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_nick(self, nickoruid: str, newnick: str, force: bool = False) -> bool:
+    def set_nick(self, nickoruid: str, newnick: str, force: bool = False) -> Dfn.RPCResult:
         """Sets the nick name of a user (changes the nick).
         force: if set to true then q-lines (banned nick) checks will be bypassed. And also, 
         if the new nick name already exists, the other existing user is killed and we will take that new nick.
@@ -161,30 +137,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_nick', {'nick': nickoruid, 'newnick': newnick, 'force': force})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_username(self, nickoruid: str, username:str) -> bool:
+    def set_username(self, nickoruid: str, username:str) -> Dfn.RPCResult:
         """Set the username / ident of a user.
 
         Args:
@@ -195,30 +164,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_username', {'nick': nickoruid, 'username': username})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_realname(self, nickoruid: str, realname:str) -> bool:
+    def set_realname(self, nickoruid: str, realname:str) -> Dfn.RPCResult:
         """Set the realname / gecos of a user.
 
         Args:
@@ -229,30 +191,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_realname', {'nick': nickoruid, 'realname': realname})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_vhost(self, nickoruid: str, vhost:str) -> bool:
+    def set_vhost(self, nickoruid: str, vhost:str) -> Dfn.RPCResult:
         """Set a virtual host (vhost) on the user.
 
         Args:
@@ -263,30 +218,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_vhost', {'nick': nickoruid, 'vhost': vhost})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_mode(self, nickoruid: str, modes:str) -> bool:
+    def set_mode(self, nickoruid: str, modes:str) -> Dfn.RPCResult:
         """Change the modes of a user.
 
         Args:
@@ -297,30 +245,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_mode', {'nick': nickoruid, 'modes': modes})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def set_snomask(self, nickoruid: str, snomask:str) -> bool:
+    def set_snomask(self, nickoruid: str, snomask:str) -> Dfn.RPCResult:
         """Change the snomask of a user.
 
         Args:
@@ -331,33 +272,26 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_snomask', {'nick': nickoruid, 'snomask': snomask})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def set_oper(self, nickoruid: str, oper_account:str, oper_class: str,
                  class_: str = '', modes: str = '',
                  snomask: str = '', vhost: str = ''
-                 ) -> bool:
+                 ) -> Dfn.RPCResult:
         """Make user an IRC operator.
 
         Args:
@@ -373,30 +307,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.set_oper', {'nick': nickoruid, 'oper_account': oper_account, 'oper_class': oper_class, 'class': class_, 'modes': modes, 'snomask': snomask, 'vhost': vhost})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def join(self, nickoruid: str, channel:str, key: str = '', force: bool = False) -> bool:
+    def join(self, nickoruid: str, channel:str, key: str = '', force: bool = False) -> Dfn.RPCResult:
         """Join a user to a channel.
 
         Note: If force is set to true then the user will walk through bans, modes and other restrictions 
@@ -413,30 +340,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.join', {'nick': nickoruid, 'channel': channel, 'key': key, 'force': force})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def part(self, nickoruid: str, channel:str, force: bool = False) -> bool:
+    def part(self, nickoruid: str, channel:str, force: bool = False) -> Dfn.RPCResult:
         """Part a user from a channel.
 
         Note: If force is set to true then the user will see a notice that they were forcefully PARTed from the channel(s). 
@@ -451,30 +371,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.part', {'nick': nickoruid, 'channel': channel, 'force': force})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def kill(self, nickoruid: str, reason:str) -> bool:
+    def kill(self, nickoruid: str, reason:str) -> Dfn.RPCResult:
         """Kill a user, showing that the user was forcefully removed.
 
         Note: There is also user.quit. The difference is that user.kill will show that the user is forcefully killed, while user.quit pretend the user quit normally. 
@@ -488,30 +401,23 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.kill', {'nick': nickoruid, 'reason': reason})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def quit(self, nickoruid: str, reason:str) -> bool:
+    def quit(self, nickoruid: str, reason:str) -> Dfn.RPCResult:
         """Quit a user, pretending it was a normal QUIT.
 
         Note: There is also user.kill. The difference is that user.kill will show that the user is forcefully killed, 
@@ -526,25 +432,18 @@ class User:
             bool: True if success else error will be stored in ErrorModel
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query('user.quit', {'nick': nickoruid, 'reason': reason})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))

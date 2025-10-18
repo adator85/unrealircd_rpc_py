@@ -1,31 +1,19 @@
-from types import SimpleNamespace
-from typing import Union
+from typing import TYPE_CHECKING 
+import unrealircd_rpc_py.objects.Definition as Dfn
+from unrealircd_rpc_py.utils import utils
 
-from unrealircd_rpc_py.Connection import Connection
-import unrealircd_rpc_py.Definition as Dfn
+if TYPE_CHECKING:
+    from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 class NameBan:
 
     DB_NAME_BANS: list[Dfn.NameBan] = []
 
-    def __init__(self, connection: Connection) -> None:
+    def __init__(self, connection: 'IConnection') -> None:
 
         # Get the Connection instance
         self.Connection = connection
         self.Logs = connection.Logs
-        self.Error = connection.Error
-
-    @property
-    def get_error(self) -> Dfn.RPCError:
-        return self.Error
-
-    @property
-    def get_response(self) -> Union[dict, None]:
-        return self.Connection.get_response()
-
-    @property
-    def get_response_np(self) -> Union[SimpleNamespace, None]:
-        return self.Connection.get_response_np()
 
     def list_(self) -> list[Dfn.NameBan]:
         """List name bans (qlines).
@@ -35,19 +23,15 @@ class NameBan:
         """
         try:
             self.DB_NAME_BANS = []
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(method='name_ban.list')
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return []
-
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return []
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.DB_NAME_BANS.append(
+                    Dfn.NameBan(error=response_model.error)
+                )
+                return self.DB_NAME_BANS
 
             namebans: list[dict] = response.get('result', {}).get('list', []) # ['result']['list']
 
@@ -65,7 +49,7 @@ class NameBan:
             self.Logs.error(f'General error: {err}')
             return []
 
-    def get(self, name: str) -> Union[Dfn.NameBan, None]:
+    def get(self, name: str) -> Dfn.NameBan:
         """Retrieve all details of a single name ban (qline).
 
         Args:
@@ -75,21 +59,14 @@ class NameBan:
             Union[ModelNameBan, None, bool]: The Object ModelNameBan, None if nothing see Error property
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(method='name_ban.get', param={"name": name})
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return None
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return Dfn.NameBan(error=response_model.error)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return None
-
-            nameban = response['result']['tkl']
+            nameban = response_model.result.get('tkl', {})
 
             obj = Dfn.NameBan(**nameban)
 
@@ -97,12 +74,12 @@ class NameBan:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return None
+            return Dfn.NameBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return None
+            return Dfn.NameBan(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def add(self, name: str, reason: str, set_by: str = None, expire_at: str = None, duration_string: str = None) -> bool:
+    def add(self, name: str, reason: str, set_by: str = None, expire_at: str = None, duration_string: str = None) -> Dfn.RPCResult:
         """Add a name ban (qline).
 
         Mandatory arguments (see structure of a name ban for an explanation of the fields):
@@ -120,38 +97,27 @@ class NameBan:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(
                 method='name_ban.add', 
                 param={"name": name, "reason": reason, "set_by": set_by, "expire_at": expire_at, "duration_string": duration_string}
                 )
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            response_model = utils.construct_rpc_response(response)
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def del_(self, name: str, set_by: str = None) -> bool:
+    def del_(self, name: str, set_by: str = None) -> Dfn.RPCResult:
         """Delete a name ban (LINE).
 
         Args:
@@ -162,33 +128,21 @@ class NameBan:
             bool: True if success
         """
         try:
-            self.Connection.EngineError.init_error()
-
             response: dict[str, dict] = self.Connection.query(
                 method='name_ban.del',
                 param={"name": name, 'set_by': set_by}
                 )
+            response_model = utils.construct_rpc_response(response)
 
-            if response is None:
-                self.Logs.error('Empty response')
-                self.Connection.EngineError.set_error(code=-2, message='Empty response')
-                return False
+            if response_model.error.code != 0:
+                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                return response_model
 
-            if 'error' in response:
-                self.Logs.error(response['error']['message'])
-                self.Connection.EngineError.set_error(**response["error"])
-                return False
-
-            if 'result' in response:
-                if response['result']:
-                    self.Logs.debug(response)
-                    return True
-
-            return True
+            return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return False
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))

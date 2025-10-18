@@ -2,33 +2,38 @@ import asyncio
 import sys
 import time
 import threading
-from types import SimpleNamespace
-from unrealircd_rpc_py.Live import LiveWebsocket
+from unrealircd_rpc_py.LiveConnectionFactory import LiveConnectionFactory
+from unrealircd_rpc_py.objects.Definition import LiveRPCResult
+
+###############
+# CREDENTIALS #
+###############
+
+url = 'https://your.rpc.link:PORT/api'
+username = 'Your-rpc-username'
+password = 'your-rpc-password'
+callback_function_instance = sys.modules[__name__]
+callback_function_name = 'callback_function_irc'
+callback_method_name = 'callback_method_irc'
 
 ##########################################
 # How to connect using callback function #
 ##########################################
 
-def callback_function_irc(response: SimpleNamespace) -> None:
+def callback_function_irc(response: LiveRPCResult) -> None:
     # Response model: https://www.unrealircd.org/docs/JSON-RPC:Log#log.subscribe
     # Possible responses: https://www.unrealircd.org/docs/List_of_all_log_messages
 
     # High level error
-    if liverpc.get_error.code != 0:
-        print("ERROR:", liverpc.get_error.code, liverpc.get_error.message)
-        return
-
-    # Because of the concurrent approach! there is also local errors
-    if hasattr(response, 'error'):
+    if response.error.code != 0:
         # Check if you are allowed to use log endpoint
-        print(response.error.code, response.error.message)
+        print("ERROR:", response.error.code, response.error.message)
         return
 
-    if hasattr(response, 'result'):
-        if isinstance(response.result, bool):
-            if response.result:
-                print(f"{response.method} has been activated")
-            return
+    if isinstance(response.result, bool):
+        if response.result:
+            print(f"{response.method} has been activated")
+        return
 
     level = response.result.level if hasattr(response.result, 'level') else ''
     subsystem = response.result.subsystem if hasattr(response.result, 'subsystem') else ''
@@ -41,13 +46,15 @@ def callback_function_irc(response: SimpleNamespace) -> None:
     print(build_msg)
 
 # Init your live stream using websocket
-liverpc = LiveWebsocket(
-            url="https://your.rpc.link:PORT/api",
-            username='Your-rpc-username',
-            password='your-rpc-password',
-            callback_object_instance=sys.modules[__name__],
-            callback_method_or_function_name='callback_function_irc'
-        )
+liverpc = LiveConnectionFactory(10).get('http')
+liverpc.setup({
+    'url': url,
+    'username': username,
+    'password': password,
+    'callback_object_instance' : callback_function_instance,
+    'callback_method_or_function_name': callback_function_name
+})
+
 
 def thread_subscribe() -> None:
     # This will run until the thread_unsubscribe is called!
@@ -59,7 +66,7 @@ def thread_unsubscribe() -> None:
     print(f"FINAL RESPONSE OF UNSUBSCRIBE: {response}")
 
 
-th_subscribe = threading.Thread(target=thread_subscribe, daemon=False)
+th_subscribe = threading.Thread(target=thread_subscribe, daemon=True)
 th_unsubscribe = threading.Thread(target=thread_unsubscribe, daemon=False)
 
 # Subscribe to the stream
@@ -79,18 +86,14 @@ th_unsubscribe.start()
 class CallBack:
 
     def __init__(self):
-
-        self.liverpc: LiveWebsocket = LiveWebsocket(
-            url="https://your.rpc.link:PORT/api",
-            username='Your-rpc-username',
-            password='your-rpc-password',
-            callback_object_instance=self,
-            callback_method_or_function_name='callback_method_irc'
-        )
-
-        if self.liverpc.get_error.code != 0:
-            print(self.liverpc.get_error.message, self.liverpc.get_error.code)
-            return
+        self.liverpc = LiveConnectionFactory(10).get('http')
+        self.liverpc.setup({
+            'url': url,
+            'username': username,
+            'password': password,
+            'callback_object_instance' : self,
+            'callback_method_or_function_name': callback_method_name
+        })
 
     def thread_subscribe(self) -> None:
 
@@ -104,26 +107,19 @@ class CallBack:
         print("[JSONRPC UNSUBSCRIBE] Unsubscribe from the stream!")
         print(response)
 
-    def callback_method_irc(self, response: SimpleNamespace) -> None:
+    def callback_method_irc(self, response: LiveRPCResult) -> None:
         # Response model: https://www.unrealircd.org/docs/JSON-RPC:Log#log.subscribe
         # Possible responses: https://www.unrealircd.org/docs/List_of_all_log_messages
 
         # High level error
-        if self.liverpc.get_error.code != 0:
-            print("ERROR:", self.liverpc.get_error.code, self.liverpc.get_error.message)
+        if response.error.code != 0:
+            print("ERROR:", response.error.code, response.error.message)
             return
 
-        # Because of the concurrent approach! there is also local errors
-        if hasattr(response, 'error'):
-            # Check if you are allowed to use log endpoint
-            print(response.error.code, response.error.message)
+        if isinstance(response.result, bool):
+            if response.result:
+                print(f"{response.method} has been activated")
             return
-
-        if hasattr(response, 'result'):
-            if isinstance(response.result, bool):
-                if response.result:
-                    print(f"{response.method} has been activated")
-                return
 
         level = response.result.level if hasattr(response.result, 'level') else ''
         subsystem = response.result.subsystem if hasattr(response.result, 'subsystem') else ''
