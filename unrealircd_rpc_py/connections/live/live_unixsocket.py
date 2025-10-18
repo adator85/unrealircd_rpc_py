@@ -69,11 +69,11 @@ class LiveUnixSocket(ILiveConnection):
 
         except AttributeError as atterr:
             self.Logs.error(f'CallbackMehtodError: {atterr}')
-            return
+            raise
 
         except RpcUnixSocketFileNotFoundError as err:
             self.Logs.critical(f'RpcUnixSocketFileNotFoundError: {err}')
-            return
+            raise
 
         self.connect()
 
