@@ -8,6 +8,7 @@ setup(
         "requests>=2.25.1",
         "websockets>=13.1"
     ],
+    license='MIT',
     author='adator',
     author_email='debian@deb.biz.st',
     description='Python library for UnrealIRCd json-rpc',
@@ -20,7 +21,6 @@ setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3.10',
-        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent'
     ],
     keywords="Unrealircd, irc, jsonrpc, json-rpc, ircd",
