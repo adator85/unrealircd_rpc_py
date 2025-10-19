@@ -112,5 +112,5 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
 ```
 # Live Connection via unixsocket or websocket
 ## How to work with
--  Class: see how_to_use_it_live_class.py
--  Function: see how_to_use_it_live_func.py
+-  Class: see [how_to_use_it_live_class.py](https://github.com/adator85/unrealircd_rpc_py/blob/main/how_to_use_it_live_class.py)
+-  Function: see [how_to_use_it_live_func.py](https://github.com/adator85/unrealircd_rpc_py/blob/main/how_to_use_it_live_func.py)
