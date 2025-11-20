@@ -50,22 +50,22 @@ class ILiveConnection(ABC):
         pass
 
     @abstractmethod
-    def subscribe(self, sources: Optional[list] = None) -> Dfn.LiveRPCResult:
+    async def subscribe(self, sources: Optional[list] = None) -> Dfn.LiveRPCResult:
         """Subscribe to the rpc server stream"""
         pass
 
     @abstractmethod
-    def unsubscribe(self) -> Dfn.LiveRPCResult:
+    async def unsubscribe(self) -> Dfn.LiveRPCResult:
         """Unsubscribe from the rpc server stream"""
         pass
 
     @abstractmethod
-    def send_to_method(self) -> Dfn.LiveRPCResult:
+    async def send_to_method(self) -> Dfn.LiveRPCResult:
         """Send to the methode"""
         pass
 
     @abstractmethod
-    def query(self,
+    async def query(self,
               method: str,
               param: Optional[dict] = None,
               query_id: int = 123,
