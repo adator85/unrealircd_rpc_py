@@ -150,15 +150,14 @@ class LiveUnixSocket(ILiveConnection):
         return response
 
     async def send_to_method(self) -> LiveRPCResult:
-        sock = socket.socket(socket.AddressFamily.AF_UNIX, socket.SocketKind.SOCK_STREAM)
+        reader, writer = await asyncio.open_unix_connection(self.path_to_socket_file)
         try:
-            sock.connect(self.path_to_socket_file)
-
             if not self.request:
                 return LiveRPCResult(result=False)
 
             # Sending the request
-            sock.sendall(f'{self.request}\r\n'.encode())
+            writer.write(f'{self.request}\r\n'.encode())
+            await writer.drain()
 
             # Get the method
             method = json.loads(self.request).get('method')
@@ -169,7 +168,7 @@ class LiveUnixSocket(ILiveConnection):
 
             while self.connected:
                 # Recieve the data from the rpc server, decode it and split it
-                response = sock.recv(4096)
+                response = await reader.readline()
                 if response[-1:] != b"\n":
                     # If END not recieved then fill the batch and go to next itteration
                     batch += response
@@ -191,10 +190,7 @@ class LiveUnixSocket(ILiveConnection):
                                                    error=RPCErrorModel(code=0, message="UnixSocket normal closure!"))
 
                     # support callbacks async et sync
-                    result = self.to_run(final_response)
-                    if asyncio.iscoroutine(result):
-                        await result
-
+                    await self.to_run(final_response) if asyncio.iscoroutinefunction(self.to_run) else self.to_run(final_response)
                     break
 
                 for bdata in response:
@@ -206,10 +202,8 @@ class LiveUnixSocket(ILiveConnection):
                         final_response = LiveRPCResult(method=response_method, error=RPCErrorModel(**error), result=utils.dict_to_namespace(result))
 
                         # support callbacks async et sync
-                        result = self.to_run(final_response)
-                        if asyncio.iscoroutine(result):
-                            await result
-
+                        await self.to_run(final_response) if asyncio.iscoroutinefunction(self.to_run) else self.to_run(final_response)
+                        
                 # Clean batch variable
                 batch = b''
 
@@ -218,20 +212,16 @@ class LiveUnixSocket(ILiveConnection):
         except AttributeError as attrerr:
             self.Logs.critical(f'AF_Unix Error: {attrerr}')
             error = LiveRPCResult(result=False, error=RPCErrorModel(code=-1, message=attrerr.__str__()))
-            result = self.to_run(error)
-            if asyncio.iscoroutine(result):
-                await result
-
+            await self.to_run(error) if asyncio.iscoroutinefunction(self.to_run) else self.to_run(error)
             return error
 
         except (TimeoutError, OSError, json.decoder.JSONDecodeError, TypeError, Exception) as err:
             self.Logs.critical(f'UnixSocket Error: {err}')
             error = LiveRPCResult(result=False, error=RPCErrorModel(code=-1, message=err.__str__()))
-            result = self.to_run(error)
-            if asyncio.iscoroutine(result):
-                await result
-
+            await self.to_run(error) if asyncio.iscoroutinefunction(self.to_run) else self.to_run(error)
             return error
 
         finally:
-            sock.close()
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()

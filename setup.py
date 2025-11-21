@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='unrealircd_rpc_py',
-    version='3.0.3',
+    version='3.0.4',
     packages=find_packages(where='.', exclude=["tests/*","test_*"]),
     install_requires=[
         "requests>=2.25.1",
