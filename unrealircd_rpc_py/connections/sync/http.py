@@ -8,6 +8,7 @@ import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Optional
 from requests.auth import HTTPBasicAuth
+from unrealircd_rpc_py.connections.sync import __version_required__
 from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcConnectionError, RpcSetupError, RpcInvalidUrlFormat
 from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Name_ban import NameBan
@@ -20,6 +21,7 @@ from unrealircd_rpc_py.objects.Rpc import Rpc
 from unrealircd_rpc_py.objects.Stats import Stats
 from unrealircd_rpc_py.objects.Whowas import Whowas
 from unrealircd_rpc_py.objects.Spamfilter import Spamfilter
+from unrealircd_rpc_py.objects.Message import Message
 from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 import unrealircd_rpc_py.utils.utils as utils
 
@@ -32,6 +34,7 @@ class HttpConnection(IConnection):
         self.__url = None
         self.__username = None
         self.__password = None
+        self.unrealircd_version: Optional[tuple] = None
 
         self.is_setup: bool = False
 
@@ -77,7 +80,12 @@ class HttpConnection(IConnection):
 
         # Create Log Instance
         self.Log: Log = Log(self)
-        """This include mainly send method requires unrealIRCd 6.1.8 or higher"""
+        """Allow you to subscribe and unsubscribe to log events (real-time streaming of JSON logs) 
+        (Requires unrealIRCd 6.1.8 or higher)"""
+
+        # Create Message Instance
+        self.Message: Message = Message(self)
+        """Allow you to send a messages to users. (Require unrealIRCD 6.2.2 or higher)"""
 
         # Option 2 with Namespacescs
         self.__response: Optional[dict] = {}
@@ -100,6 +108,15 @@ class HttpConnection(IConnection):
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
             raise RpcConnectionError('The "setup" method must be executed before "connect" method.', -1)
+        
+        _server = self.Server.get()
+        _version = _server.server.features.software
+        try:
+            # UnrealIRCd-6.2.1
+            _version = _version.split('-')[1].split('.')
+            self.unrealircd_version = tuple(map(lambda x: int(x), _version))
+        except KeyError:
+            self.Logs.warning('Impossible to define the server version!')
 
     def query(self,
               method: str,
@@ -119,8 +136,17 @@ class HttpConnection(IConnection):
             dict: The response from the server
             None: no response from the server
         """
-
         # data = '{"jsonrpc": "2.0", "method": "stats.get", "params": {}, "id": 123}'
+        _method_impacted_by_version = [key for key in __version_required__]
+        _method = method.split('.')[0]
+        if _method in _method_impacted_by_version:
+            if not utils.is_version_ircd_ok(self.unrealircd_version, __version_required__.get(_method, None)):
+                return {"jsonrpc": jsonrpc,
+                        "method": method,
+                        "error": {'message': f'This object {_method} is not available for this ircd version. must be {__version_required__.get(_method, None)} or higher',
+                                  'code': -1},
+                        "id": query_id}
+
         get_method = method
         get_param = {} if param is None else param
 

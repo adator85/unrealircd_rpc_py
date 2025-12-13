@@ -1,3 +1,7 @@
+"""
+Log object for UnrealIRCd JSON-RPC
+Minimum Unrealircd version: 6.1.8
+"""
 import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Union, Literal, Optional, TYPE_CHECKING
@@ -22,7 +26,6 @@ class Log:
             list[ModelNameBan]: List of ModelNameBan, None if nothing or Error see the property
         """
         try:
-
             response: dict[str, dict] = self.Connection.query(
                 method='log.list', 
                 param={"sources": sources}

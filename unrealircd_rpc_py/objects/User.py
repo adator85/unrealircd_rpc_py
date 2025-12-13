@@ -1,4 +1,3 @@
-from cgitb import reset
 from typing import TYPE_CHECKING, Literal
 import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.utils import utils

@@ -13,13 +13,15 @@ from unrealircd_rpc_py.objects.Spamfilter import Spamfilter
 from unrealircd_rpc_py.objects.Stats import Stats
 from unrealircd_rpc_py.objects.User import User
 from unrealircd_rpc_py.objects.Whowas import Whowas
+from unrealircd_rpc_py.objects.Message import Message
 
 class IConnection(ABC):
 
     @abstractmethod
     def __init__(self):
         super().__init__()
-        self.Logs: Logger
+        self.Logs: Optional[Logger] = None
+        self.unrealircd_version: Optional[tuple] = None
 
         # Create Stats Instance
         self.Stats: Stats = Stats(self)
@@ -28,10 +30,6 @@ class IConnection(ABC):
         # Create Rpc Instance
         self.Rpc: Rpc = Rpc(self)
         """The Rpc module instance"""
-
-        # Create Log Instance
-        self.Log: Log = Log(self)
-        """This include mainly send method requires unrealIRCd 6.1.8 or higher"""
 
         # Create Whowas Instance
         self.Whowas: Whowas = Whowas(self)
@@ -64,6 +62,15 @@ class IConnection(ABC):
         # Create Spamfilter Instance
         self.Spamfilter: Spamfilter = Spamfilter(self)
         """The Spamfilter module instance"""
+
+        # Create Log Instance
+        self.Log: Log = Log(self)
+        """Allow you to subscribe and unsubscribe to log events (real-time streaming of JSON logs) 
+        (Requires unrealIRCd 6.1.8 or higher)"""
+
+        # Create Message Instance
+        self.Message: Message = Message(self)
+        """Allow you to send a messages to users. (Require unrealIRCD 6.2.2 or higher)"""
 
     @abstractmethod
     def setup(self, params: dict) -> None:
