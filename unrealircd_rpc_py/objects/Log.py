@@ -1,3 +1,7 @@
+"""
+Log object for UnrealIRCd JSON-RPC
+Minimum Unrealircd version: 6.1.8
+"""
 import unrealircd_rpc_py.objects.Definition as Dfn
 from types import SimpleNamespace
 from typing import Union, Literal, Optional, TYPE_CHECKING
@@ -7,6 +11,7 @@ from unrealircd_rpc_py.utils import utils
 if TYPE_CHECKING:
     from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
+
 class Log:
 
     def __init__(self, connection: 'IConnection') -> None:
@@ -15,23 +20,25 @@ class Log:
         self.Connection = connection
         self.Logs = connection.Logs
 
-    def list_(self, sources: Optional[list] = None) -> Union[SimpleNamespace, Dfn.RPCResult]:
+    def list_(self, sources: Optional[list] = None
+              ) -> Union[SimpleNamespace, Dfn.RPCResult]:
         """Fetch past log entries (since boot).
 
         Returns:
-            list[ModelNameBan]: List of ModelNameBan, None if nothing or Error see the property
+            list[ModelNameBan]: List of ModelNameBan,
+                None if nothing or Error see the property
         """
         try:
-
             response: dict[str, dict] = self.Connection.query(
-                method='log.list', 
+                method='log.list',
                 param={"sources": sources}
                 )
 
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return utils.dict_to_namespace(response)
@@ -43,7 +50,8 @@ class Log:
             self.Logs.error(f'General error: {err}')
             return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def send(self, msg: str, level: Literal['debug','info','warn','error','fatal'],
+    def send(self, msg: str,
+             level: Literal['debug', 'info', 'warn', 'error', 'fatal'],
              subsystem: str, event_id: str, timestamp: float = time()
              ) -> Dfn.RPCResult:
         """ Send a log message / server notice.
@@ -52,10 +60,11 @@ class Log:
 
         Args:
             msg (str): The message you want to send to the server
-            level (Literal[&#39;debug&#39;,&#39;info&#39;,&#39;warn&#39;,&#39;error&#39;,&#39;fatal&#39;]): You can pick the level in the list
+            level (str): You can pick the level in the list
             subsystem (str): You can put anything you want as a subsystem
             event_id (str): You can put anything you want as a event_id
-            timestamp (float, optional): The current timestamp. Defaults to time().
+            timestamp (float, optional): The current timestamp.
+                Defaults to time().
 
         Returns:
             bool: True if is okey, else if there is an error
@@ -64,13 +73,15 @@ class Log:
         try:
             response = self.Connection.query(
                     method='log.send',
-                    param={"msg": msg, "level": level, "subsystem": subsystem, "event_id": event_id, "timestamp": timestamp}
+                    param={"msg": msg, "level": level, "subsystem": subsystem,
+                           "event_id": event_id, "timestamp": timestamp}
                     )
 
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return response_model

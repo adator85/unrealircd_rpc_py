@@ -5,7 +5,11 @@ from re import match
 from types import SimpleNamespace
 from typing import Any, Optional, Union
 import unrealircd_rpc_py.objects.Definition as Dfn
-from unrealircd_rpc_py.exceptions.rpc_exceptions import RpcInvalidUrlFormat, RpcUnixSocketFileNotFoundError
+from unrealircd_rpc_py.exceptions.rpc_exceptions import (
+    RpcInvalidUrlFormat,
+    RpcUnixSocketFileNotFoundError
+)
+
 
 def check_unix_socket_file(path_to_socket_file: str) -> bool:
     """Check provided full path to socket file if it exist
@@ -24,20 +28,6 @@ def check_unix_socket_file(path_to_socket_file: str) -> bool:
 
     return True
 
-def dict_to_namespace(dictionary: dict) -> Union[SimpleNamespace, dict]:
-    """Convert a dict to namespace if possible
-
-    Args:
-        dictionary (dict): The dictionary you want to convert
-
-    Returns:
-        Union[SimpleNamespace, dict]: SimpleNamespace object or dict if impossible to convert
-    """
-
-    if isinstance(dictionary, dict):
-        return SimpleNamespace(**{key: dict_to_namespace(value) for key, value in dictionary.items()})
-
-    return dictionary
 
 def check_url(url: str) -> Optional[tuple[str, str, int]]:
     """Check provided url if it follow the format
@@ -55,13 +45,14 @@ def check_url(url: str) -> Optional[tuple[str, str, int]]:
 
     match_url = match(pattern, url)
 
-    if not match_url is None:
+    if match_url is not None:
         host = match_url.group(1)
         endpoint = match_url.group(3)
         port = match_url.group(2)
-        return (host, endpoint, port)
+        return host, endpoint, port
     else:
         return None
+
 
 def construct_rpc_response(response: dict) -> Dfn.RPCResult:
     """Construct the rpc result
@@ -72,10 +63,10 @@ def construct_rpc_response(response: dict) -> Dfn.RPCResult:
     Returns:
         RPCResult: The RPC Result
         ```python
-        RPCResult(jsonrpc='2.0', 
-                 method='method.name', 
-                 error=RPCErrorModel(code=0, message=None), 
-                 result={}, 
+            RPCResult(jsonrpc='2.0',
+                 method='method.name',
+                 error=RPCErrorModel(code=0, message=None),
+                 result={},
                  id=1760041102
                  )
         ```
@@ -87,8 +78,10 @@ def construct_rpc_response(response: dict) -> Dfn.RPCResult:
 
     return Dfn.RPCResult(**response, error=error_model)
 
+
 def get_timestamp() -> str:
     return datetime.now().__str__()
+
 
 def decompose_url(url: str) -> tuple[str, str, int]:
     """Check provided url if it follow the format
@@ -108,24 +101,33 @@ def decompose_url(url: str) -> tuple[str, str, int]:
 
     match_url = match(pattern, url)
 
-    if not match_url is None:
+    if match_url is not None:
         port = match_url.group(2)
         host = match_url.group(1)
         endpoint = match_url.group(3)
         return host, endpoint, int(port)
     else:
-        raise RpcInvalidUrlFormat("You must provide the url in this format: https://your.rpcjson.link:port/api")
+        raise RpcInvalidUrlFormat(
+            "You must provide the url in this format: "
+            "https://your.rpcjson.link:port/api"
+        )
+
 
 def dict_to_namespace(dictionary: Any) -> Union[SimpleNamespace, Any]:
     """Try to convert a dictionary to a SimpleNamespace object
 
     :param dictionary:
-    :return: SimpleNamespace object or the object if it was impossible to convert
+    :return: SimpleNamespace object or the object
+    if it was impossible to convert
     """
     if isinstance(dictionary, dict):
-        return SimpleNamespace(**{key: dict_to_namespace(value) for key, value in dictionary.items()})
+        return SimpleNamespace(
+            **{key: dict_to_namespace(value)
+               for key, value in dictionary.items()}
+        )
     else:
         return dictionary
+
 
 def verify_unix_socket_file(path_to_socket_file: str) -> bool:
     """Check provided full path to socket file if it exist
@@ -137,10 +139,13 @@ def verify_unix_socket_file(path_to_socket_file: str) -> bool:
         bool: True if path is correct else False
     """
     if path_to_socket_file is None or not os.path.exists(path_to_socket_file):
-        raise RpcUnixSocketFileNotFoundError("The socket file is not available, "
-                                          "please check the full path of your socket file")
+        raise RpcUnixSocketFileNotFoundError(
+            "The socket file is not available, "
+            "please check the full path of your socket file"
+        )
 
     return True
+
 
 def convert_to_jsonrpc_result(result: Union[dict, Any]) -> Dfn.LiveRPCResult:
 
@@ -166,6 +171,7 @@ def remove_logger(logger_name: str) -> None:
 
     return None
 
+
 def start_log_system(name: str, debug_level: int = 20) -> logging.Logger:
     """Init log system
     """
@@ -182,7 +188,9 @@ def start_log_system(name: str, debug_level: int = 20) -> logging.Logger:
 
     # Define log format
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s (%(filename)s::%(funcName)s::%(lineno)d)')
+        '%(asctime)s - %(levelname)s - %(message)s '
+        '(%(filename)s::%(funcName)s::%(lineno)d)'
+    )
 
     # Apply log format
     stdout_hanlder.setFormatter(formatter)
@@ -191,3 +199,24 @@ def start_log_system(name: str, debug_level: int = 20) -> logging.Logger:
     logger.addHandler(stdout_hanlder)
 
     return logger
+
+
+def is_version_ircd_ok(
+        current_server_version: Optional[tuple] = None,
+        minimum_version: Optional[tuple] = None
+) -> bool:
+    """Check if the version is allowed or not
+
+    Args:
+        current_server_version (Optional[tuple]): _description_
+        minimum_version (Optional[tuple]): _description_
+    """
+
+    if (isinstance(current_server_version, tuple)
+            and isinstance(minimum_version, tuple)):
+        if current_server_version >= minimum_version:
+            return True
+        else:
+            return False
+    else:
+        return True

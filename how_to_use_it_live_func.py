@@ -12,8 +12,14 @@ from unrealircd_rpc_py.objects.Definition import LiveRPCResult
 url = 'https://your.rpc.link:PORT/api'
 username = 'Your-rpc-username'
 password = 'your-rpc-password'
-callback_function_instance = sys.modules[__name__]
-callback_function_name = 'callback_function_irc'
+params = {
+    'url': url,
+    'username': username,
+    'password': password,
+    'callback_object_instance' : sys.modules[__name__],
+    'callback_method_or_function_name': 'callback_function_irc'
+}
+
 
 ##########################################
 # How to connect using callback function #
@@ -44,19 +50,8 @@ def callback_function_irc(response: LiveRPCResult) -> None:
 
     print(build_msg)
 
-# Init your live stream using websocket
-liverpc = LiveConnectionFactory(10).get('http')
-liverpc.setup({
-    'url': url,
-    'username': username,
-    'password': password,
-    'callback_object_instance' : callback_function_instance,
-    'callback_method_or_function_name': callback_function_name
-})
-
-
 def thread_subscribe() -> None:
-    # This will run until the thread_unsubscribe is called!
+    # This thread will run until the thread_unsubscribe is called!
     response = asyncio.run(liverpc.subscribe(["all"]))
     print(f"FINAL RESPONSE OF SUBSCRIBE: {response}")
 
@@ -64,6 +59,9 @@ def thread_unsubscribe() -> None:
     response = asyncio.run(liverpc.unsubscribe())
     print(f"FINAL RESPONSE OF UNSUBSCRIBE: {response}")
 
+# Init your live stream using websocket
+liverpc = LiveConnectionFactory(10).get('http')
+liverpc.setup(params)
 
 th_subscribe = threading.Thread(target=thread_subscribe, daemon=True)
 th_unsubscribe = threading.Thread(target=thread_unsubscribe, daemon=False)

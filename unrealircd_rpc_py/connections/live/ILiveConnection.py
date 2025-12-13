@@ -3,6 +3,7 @@ from typing import Optional
 from abc import ABC, abstractmethod
 import unrealircd_rpc_py.objects.Definition as Dfn
 
+
 class ILiveConnection(ABC):
 
     @abstractmethod
@@ -12,7 +13,8 @@ class ILiveConnection(ABC):
 
     @abstractmethod
     def setup(self, params: dict) -> None:
-        """Setup the connection by providing credentials or The path to the socket file
+        """Setup the connection by providing credentials or The path to the
+        socket file
 
         Exemple Method WebSocket (http):
         ```python
@@ -41,41 +43,43 @@ class ILiveConnection(ABC):
             RpcInvalidUrlFormat: Invalid url.
             RpcSetupError: When connect method is called before setup method.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def connect(self) -> None:
         """Perform some actions to simulate connection.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
-    async def subscribe(self, sources: Optional[list] = None) -> Dfn.LiveRPCResult:
+    async def subscribe(self, sources: Optional[list] = None
+                        ) -> Dfn.LiveRPCResult:
         """Subscribe to the rpc server stream"""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     async def unsubscribe(self) -> Dfn.LiveRPCResult:
         """Unsubscribe from the rpc server stream"""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     async def send_to_method(self) -> Dfn.LiveRPCResult:
         """Send to the methode"""
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     async def query(self,
-              method: str,
-              param: Optional[dict] = None,
-              query_id: int = 123,
-              jsonrpc: str = '2.0'
-              ) -> Optional[dict]:
+                    method: str,
+                    param: Optional[dict] = None,
+                    query_id: int = 123,
+                    jsonrpc: str = '2.0'
+                    ) -> Optional[dict]:
         """This method will use to run the queries
 
         Args:
             method (str): The method to send to unrealircd
-            param (dict, optional): the paramaters to send to unrealircd. Defaults to None.
+            param (dict, optional): the paramaters to send to unrealircd.
+                Defaults to None.
             query_id (int, optional): id of the request. Defaults to 123.
             jsonrpc (str, optional): jsonrpc. Defaults to '2.0'.
 
@@ -83,4 +87,4 @@ class ILiveConnection(ABC):
             dict: The response from the server
             None: no response from the server
         """
-        pass
+        raise NotImplementedError()
