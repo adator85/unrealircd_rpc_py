@@ -3,7 +3,7 @@ from unrealircd_rpc_py.ConnectionFactory import ConnectionFactory
 try:
 
     # Init, Setup and connect
-    rpc = ConnectionFactory(debug_level=10).get('http')
+    rpc = ConnectionFactory().get('http')
     check = rpc.setup({
         'url':'https://your.rpc.link:PORT/api',
         'username':'Your-rpc-user',
