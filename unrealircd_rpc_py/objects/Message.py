@@ -9,6 +9,7 @@ from unrealircd_rpc_py.utils import utils
 if TYPE_CHECKING:
     from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
+
 class Message:
 
     def __init__(self, connection: 'IConnection') -> None:
@@ -25,16 +26,19 @@ class Message:
             message (str): The message to send
 
         Returns:
-            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message was sent.
+            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message
+                was sent.
         """
         try:
-            response: dict[str, dict] = self.Connection.query('message.send_privmsg',
-                                                              param={'nick': nickoruid,
-                                                                     'message': message})
+            response: dict[str, dict] = self.Connection.query(
+                'message.send_privmsg',
+                {'nick': nickoruid, 'message': message}
+            )
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return response_model
@@ -54,16 +58,18 @@ class Message:
             message (str): The message to send
 
         Returns:
-            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message was sent.
+            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message
+                was sent.
         """
         try:
-            response: dict[str, dict] = self.Connection.query('message.send_notice',
-                                                              {'nick': nickoruid,
-                                                               'message': message})
+            response: dict[str, dict] = self.Connection.query(
+                'message.send_notice',
+                {'nick': nickoruid, 'message': message})
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return response_model
@@ -75,7 +81,8 @@ class Message:
             self.Logs.error(f'General error: {err}')
             return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
-    def send_numeric(self, nickoruid: str, numeric: int, message: str) -> Dfn.RPCResult:
+    def send_numeric(self, nickoruid: str, numeric: int, message: str
+                     ) -> Dfn.RPCResult:
         """This sends an IRC numeric to a user.
 
         Args:
@@ -84,17 +91,20 @@ class Message:
             message (str): The message to send
 
         Returns:
-            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message was sent.
+            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message
+                was sent.
         """
         try:
-            response: dict[str, dict] = self.Connection.query(method='message.send_numeric',
-                                                              param={'nick': nickoruid,
-                                                                     'numeric': numeric,
-                                                                     'message': message})
+            response: dict[str, dict] = self.Connection.query(
+                method='message.send_numeric',
+                param={'nick': nickoruid, 'numeric': numeric,
+                       'message': message}
+            )
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return response_model
@@ -113,29 +123,32 @@ class Message:
                             context: Optional[str] = None) -> Dfn.RPCResult:
         """This sends an IRC standard reply to a user
 
-        Link to standard reply: https://ircv3.net/specs/extensions/standard-replies
+        Link to standard reply:
+        https://ircv3.net/specs/extensions/standard-replies
 
         Args:
             nickoruid (str): User to send the message to (Nick or UID)
             type_ (str): FAIL, WARN or NOTE
-            code (str): Machine-readable reply code representing the meaning of the message to client software
-            description (str): Description of the reply which is shown to users.
+            code (str): Machine-readable reply code representing the meaning
+                of the message to client software
+            description (str): Description of the reply which is shown to
+                users.
             context (str, optional) : The context
 
         Returns:
-            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message was sent.
+            RPCResult ([Dfn.RPCResult]): Returns RPCResult if the message
+                was sent.
         """
         try:
-            response: dict[str, dict] = self.Connection.query(method='message.send_standard_reply',
-                                                              param={'nick': nickoruid,
-                                                                     'type': type_,
-                                                                     'code': code,
-                                                                     'description': description,
-                                                                     'context': context})
+            response: dict[str, dict] = self.Connection.query(
+                method='message.send_standard_reply',
+                param={'nick': nickoruid, 'type': type_, 'code': code,
+                       'description': description, 'context': context})
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
-                self.Logs.error(f"Code: {response_model.error.code} - Msg: {response_model.error.message}")
+                self.Logs.error(f"Code: {response_model.error.code} "
+                                f"- Msg: {response_model.error.message}")
                 return response_model
 
             return response_model
