@@ -1,7 +1,6 @@
 from logging import Logger
 from typing import Optional
 from abc import ABC, abstractmethod
-import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Log import Log
 from unrealircd_rpc_py.objects.Name_ban import NameBan
@@ -14,6 +13,7 @@ from unrealircd_rpc_py.objects.Stats import Stats
 from unrealircd_rpc_py.objects.User import User
 from unrealircd_rpc_py.objects.Whowas import Whowas
 from unrealircd_rpc_py.objects.Message import Message
+
 
 class IConnection(ABC):
 
@@ -36,7 +36,9 @@ class IConnection(ABC):
         """The Whowas module instance"""
 
         # Create Server_ban_exception Instance
-        self.Server_ban_exception: ServerBanException = ServerBanException(self)
+        self.Server_ban_exception: ServerBanException = ServerBanException(
+            self
+        )
         """The ServerBanException module instance"""
 
         # Create Server_ban Instance
@@ -65,16 +67,19 @@ class IConnection(ABC):
 
         # Create Log Instance
         self.Log: Log = Log(self)
-        """Allow you to subscribe and unsubscribe to log events (real-time streaming of JSON logs) 
+        """Allow you to subscribe and unsubscribe to log events
+        (real-time streaming of JSON logs)
         (Requires unrealIRCd 6.1.8 or higher)"""
 
         # Create Message Instance
         self.Message: Message = Message(self)
-        """Allow you to send a messages to users. (Require unrealIRCD 6.2.2 or higher)"""
+        """Allow you to send a messages to users.
+        (Require unrealIRCD 6.2.2 or higher)"""
 
     @abstractmethod
     def setup(self, params: dict) -> None:
-        """Setup the connection by providing credentials or The path to the socket file
+        """Setup the connection by providing credentials or
+        The path to the socket file
 
         Exemple Method WebSocket (http):
         ```python
@@ -99,7 +104,7 @@ class IConnection(ABC):
             RpcSetupError: When Connect method is called before setup method.
             RpcInvalidUrlFormat: When the url format is not valid.
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def query(self,
@@ -112,7 +117,8 @@ class IConnection(ABC):
 
         Args:
             method (str): The method to send to unrealircd
-            param (dict, optional): the paramaters to send to unrealircd. Defaults to None.
+            param (dict, optional): the paramaters to send to unrealircd.
+                Defaults to None.
             query_id (int, optional): id of the request. Defaults to 123.
             jsonrpc (str, optional): jsonrpc. Defaults to '2.0'.
 
@@ -120,7 +126,7 @@ class IConnection(ABC):
             dict: The response from the server
             None: no response from the server
         """
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def get_response(self) -> Optional[dict]:
@@ -129,4 +135,4 @@ class IConnection(ABC):
         Returns:
             Optional[dict]: The response
         """
-        pass
+        raise NotImplementedError()

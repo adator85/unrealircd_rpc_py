@@ -13,7 +13,8 @@ class LiveConnectionFactory:
     def __init__(self, debug_level: int = 20):
         self.debug_level = debug_level
 
-    def get(self, connection: Literal['unixsocket', 'http']) -> ILiveConnection:
+    def get(self, connection: Literal['unixsocket', 'http']
+            ) -> ILiveConnection:
         match connection:
             case 'unixsocket':
                 return LiveUnixSocket(self.debug_level)
