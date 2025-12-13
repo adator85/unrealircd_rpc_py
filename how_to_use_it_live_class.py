@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import time
 import threading
 from unrealircd_rpc_py.LiveConnectionFactory import LiveConnectionFactory
@@ -21,7 +20,7 @@ callback_method_name = 'callback_method_irc'
 class CallBack:
 
     def __init__(self):
-        self.liverpc = LiveConnectionFactory(10).get('http')
+        self.liverpc = LiveConnectionFactory().get('http')
         self.liverpc.setup({
             'url': url,
             'username': username,
@@ -32,17 +31,18 @@ class CallBack:
 
     def thread_subscribe(self) -> None:
 
-        response: dict[str, dict] = asyncio.run(self.liverpc.subscribe())
+        response = asyncio.run(self.liverpc.subscribe())
         print("[JSONRPC SUBSCRIBE] Subscribe to the stream!")
         print(response)
 
     def thread_unsubscribe(self) -> None:
 
-        response: dict[str, dict] = asyncio.run(self.liverpc.unsubscribe())
+        response = asyncio.run(self.liverpc.unsubscribe())
         print("[JSONRPC UNSUBSCRIBE] Unsubscribe from the stream!")
         print(response)
 
-    def callback_method_irc(self, response: LiveRPCResult) -> None:
+    @staticmethod
+    def callback_method_irc(response: LiveRPCResult) -> None:
         # Response model: https://www.unrealircd.org/docs/JSON-RPC:Log#log.subscribe
         # Possible responses: https://www.unrealircd.org/docs/List_of_all_log_messages
 
