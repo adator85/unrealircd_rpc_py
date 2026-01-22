@@ -34,6 +34,7 @@ class UnixSocketConnection(IConnection):
         self.debug_level = debug_level
         self.Logs: logging.Logger
         self.__init_log_system()
+        self.unrealircd_version: Optional[tuple] = None
 
         self.__path_to_socket_file = None
 
@@ -115,11 +116,17 @@ class UnixSocketConnection(IConnection):
     def connect(self) -> None:
         if not self.is_setup:
             self.Logs.critical('You must call "setup" method before anything.')
-            raise RpcConnectionError(
-                'The "setup" method must be executed '
-                'before "connect" method.',
-                -1
-            )
+            raise RpcConnectionError('The "setup" method must be executed '
+                                     'before "connect" method.',
+                                     -1)
+        _server = self.Server.get()
+        _version = _server.server.features.software
+        try:
+            # UnrealIRCd-6.2.1
+            _version = _version.split('-')[1].split('.')
+            self.unrealircd_version = tuple(map(lambda x: int(x), _version))
+        except KeyError:
+            self.Logs.warning('Impossible to define the server version!')
 
     def query(self,
               method: str,

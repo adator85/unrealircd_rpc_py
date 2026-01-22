@@ -123,11 +123,9 @@ class HttpConnection(IConnection):
             self.Logs.critical(
                 'You must call "setup" method before anything.'
             )
-            raise RpcConnectionError(
-                'The "setup" method must be executed '
-                'before "connect" method.',
-                -1
-            )
+            raise RpcConnectionError('The "setup" method must be executed '
+                                     'before "connect" method.',
+                                     -1)
 
         _server = self.Server.get()
         _version = _server.server.features.software
