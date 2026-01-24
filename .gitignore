@@ -6,6 +6,7 @@ build/*
 dist/*
 tests/*
 docs/*
+db/*
 setup.py
 test*.py
 test_live.py
