@@ -2,11 +2,14 @@ from setuptools import setup, find_packages
 
 setup(
     name='unrealircd_rpc_py',
-    version='3.0.6',
+    version='3.1.0',
     packages=find_packages(where='.', exclude=["tests/*","test_*"]),
     install_requires=[
         "requests>=2.25.1",
-        "websockets>=13.1"
+        "websockets>=13.1",
+        "sqlalchemy>=2.0.46",
+        "pymysql>=1.1.2",
+        "psycopg2>=2.9.11"
     ],
     license='MIT',
     author='adator',

@@ -7,6 +7,6 @@ dist/*
 tests/*
 docs/*
 setup.py
-test.py
+test*.py
 test_live.py
 *.zip
