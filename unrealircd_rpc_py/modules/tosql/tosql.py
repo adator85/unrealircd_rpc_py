@@ -15,6 +15,60 @@ class RpcCredentialsHttp(MainModel):
     password: str = ''
 
 class ToSql:
+    """
+    The ToSql class provides functionality to interact with an UnrealIRCd RPC server and 
+    transfer data from the RPC server into a SQL database. The class handles the connection 
+    to both the RPC server and the SQL database, and provides methods for transferring data 
+    related to clients, channels, name bans, and server-client relationships from the RPC 
+    server into the database.
+
+    This class allows for seamless synchronization between UnrealIRCd's internal state 
+    (via JSON-RPC) and a relational database.
+
+    Attributes:
+        _date_format (str): The date format used for parsing datetime fields from the RPC server.
+        _engine_name (str): The name of the database engine (e.g., 'sqlite', 'mysql', 'postgresql').
+        logs (Logger): A logger instance for logging relevant information and errors.
+        _db_debug (bool): Flag to enable/disable debug logging for the database connection.
+        _db_hostname (Optional[str]): The hostname of the database server.
+        _db_port (Optional[int]): The port number to connect to the database.
+        _db_username (Optional[str]): The username to authenticate with the database.
+        _db_password (Optional[str]): The password for the database username.
+        _db_name (Optional[str]): The name of the database to connect to.
+        _sql (Optional[Database]): The database connection instance.
+        _rpc (Optional[IConnection]): The RPC connection instance for communicating with UnrealIRCd.
+        __rpc_credentials (RpcCredentialsHttp): The credentials used to authenticate the RPC connection.
+        _rpc_connected (bool): Flag indicating whether the RPC connection is established.
+        _sql_connected (bool): Flag indicating whether the SQL connection is established.
+
+    Methods:
+        run() -> bool:
+            Establishes connections to both the RPC server and the SQL database, and then 
+            transfers the data from the RPC server to the SQL database by calling other 
+            methods for different data types (e.g., channels, clients, name bans, etc.).
+
+        channel_tosql() -> bool:
+            Transfers channel and channel member data from the RPC server to the SQL database.
+
+        client_tosql() -> bool:
+            Transfers client and user data from the RPC server to the SQL database.
+
+        nameban_tosql() -> bool:
+            Transfers name ban data from the RPC server to the SQL database.
+
+        client_server_tosql() -> bool:
+            Transfers server and client-server relationship data from the RPC server to the SQL database.
+
+        _rpc_connect() -> IConnection:
+            Establishes the RPC connection and sets up the issuer for authentication.
+
+        _sql_connect() -> Database:
+            Establishes the SQL database connection and initializes it.
+
+    Properties:
+        rpc_credentials (RpcCredentialsHttp):
+            Returns the current RPC credentials for connection.
+    """
 
     def __init__(self, engine_name: str,
                  db_hostname: Optional[str] = None,
@@ -22,8 +76,16 @@ class ToSql:
                  db_password: Optional[str] = None,
                  db_name: Optional[str] = None,
                  db_port: Optional[int] = 0,
-                 db_debug: bool = False):
-        """_summary_
+                 db_debug: bool = False,
+                 debug_level: int = 20):
+        """The ToSql class provides functionality to interact with an UnrealIRCd RPC server and 
+    transfer data from the RPC server into a SQL database. The class handles the connection 
+    to both the RPC server and the SQL database, and provides methods for transferring data 
+    related to clients, channels, name bans, and server-client relationships from the RPC 
+    server into the database.
+
+    This class allows for seamless synchronization between UnrealIRCd's internal state 
+    (via JSON-RPC) and a relational database.
 
         Args:
             engine_name (str): The engine name (ex. sqlite, mysql, postgresql)
@@ -37,7 +99,7 @@ class ToSql:
         """
         self._date_format: str = '%Y-%m-%dT%H:%M:%S.%fZ'
         self._engine_name = engine_name
-        self.logs = utils.start_log_system('unrealircd-rpc-py-sql', 10)
+        self.logs = utils.start_log_system('unrealircd-rpc-py-sql', debug_level)
 
         # Credentials setup
         self._db_debug = db_debug
@@ -56,7 +118,6 @@ class ToSql:
 
         # Are servers connected
         self._rpc_connected = False
-        self._sql_connected = False
 
     def _rpc_connect(self) -> IConnection:
         try:
@@ -89,23 +150,26 @@ class ToSql:
         _sql.db_init()
         return _sql
 
-    def run(self):
+    def run(self) -> bool:
         self._rpc = self._rpc_connect()
         self._sql = self._sql_connect()
 
         if not self._rpc_connected:
             self.logs.critical("The JSON-RPC Server is down!")
-            return None
+            return False
         
         if not self._sql.connected:
             self.logs.critical("The SQL Connection is down!")
-            return None
+            return False
 
         if self._sql.connected and self._rpc_connected:
             self.client_tosql()
             self.channel_tosql()
             self.nameban_tosql()
             self.client_server_tosql()
+            return True
+        
+        return False
 
     def channel_tosql(self) -> bool:
 
