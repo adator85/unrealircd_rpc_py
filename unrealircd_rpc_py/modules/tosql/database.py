@@ -41,7 +41,7 @@ class Database:
         """
         self.__engine: Optional[Engine] = None
         self.__scoped_session: Optional[scoped_session[Session]] = None
-        self.logs: logging.Logger = utils.start_log_system('unrealircd-rpc-py-sql', 10)
+        self.logs: logging.Logger = logging.getLogger('unrealircd-rpc-py-sql')
 
         # Credentials setup
         self._engine_name: str = engine_name
@@ -141,8 +141,8 @@ class Database:
             base.metadata.drop_all(self.get_engine())
             base.metadata.create_all(self.get_engine())
             self.logs.debug("::> Database created using ORM <::")
-        except Exception as err:
-            self.logs.error(f'General Error: {err}', exc_info=True)
+        except Exception:
+            raise
 
     def insert_multiple_objs_to_db(self, objs: list[object]) -> bool:
         """

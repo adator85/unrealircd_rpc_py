@@ -37,6 +37,7 @@ class ToSql:
         """
         self._date_format: str = '%Y-%m-%dT%H:%M:%S.%fZ'
         self._engine_name = engine_name
+        self.logs = utils.start_log_system('unrealircd-rpc-py-sql', 10)
 
         # Credentials setup
         self._db_debug = db_debug
@@ -53,17 +54,27 @@ class ToSql:
         self._rpc: Optional[IConnection] = None
         self.__rpc_credentials: RpcCredentialsHttp = RpcCredentialsHttp()
 
+        # Are servers connected
+        self._rpc_connected = False
+        self._sql_connected = False
+
     def _rpc_connect(self) -> IConnection:
-        # Init the rpc object 
-        rpc = ConnectionFactory().get('http')
+        try:
+            # Init the rpc object 
+            rpc = ConnectionFactory().get('http')
 
-        # Setup the rpc connection.
-        rpc.setup(self.rpc_credentials.to_dict())
+            # Setup the rpc connection.
+            rpc.setup(self.rpc_credentials.to_dict())
 
-        # Set the issuer:
-        rpc.Rpc.set_issuer('ircd_rpc_sql')
+            # Set the issuer:
+            rpc.Rpc.set_issuer('ircd_rpc_sql')
 
-        return rpc
+            # Connection established.
+            self._rpc_connected = True
+
+            return rpc
+        except Exception as err:
+            self.logs.error(f"Error On API: {err}")
 
     def _sql_connect(self) -> Database:
         _sql = Database(
@@ -82,7 +93,15 @@ class ToSql:
         self._rpc = self._rpc_connect()
         self._sql = self._sql_connect()
 
-        if self._sql.connected:
+        if not self._rpc_connected:
+            self.logs.critical("The JSON-RPC Server is down!")
+            return None
+        
+        if not self._sql.connected:
+            self.logs.critical("The SQL Connection is down!")
+            return None
+
+        if self._sql.connected and self._rpc_connected:
             self.client_tosql()
             self.channel_tosql()
             self.nameban_tosql()
