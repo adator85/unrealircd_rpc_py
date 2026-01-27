@@ -630,3 +630,16 @@ class ConnThrottle(MainModel):
     stats_last_minute: CTStatsLastMinute  = field(default_factory=CTStatsLastMinute)
     config: CTConfig = field(default_factory=CTConfig)
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
+
+#######################
+# SecurityGroup Class #
+#######################
+
+@dataclass
+class SecurityGroup(MainModel):
+    name: str = None
+    priority: int = 0
+    identified: bool = False
+    reputation_score: int = 0
+    builtin: bool = False
+    error: RPCErrorModel = field(default_factory=RPCErrorModel)

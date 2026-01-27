@@ -25,6 +25,7 @@ from unrealircd_rpc_py.objects.Whowas import Whowas
 from unrealircd_rpc_py.objects.Spamfilter import Spamfilter
 from unrealircd_rpc_py.objects.Message import Message
 from unrealircd_rpc_py.objects.Connthrottle import ConnThrottle
+from unrealircd_rpc_py.objects.Security_group import SecurityGroup
 from unrealircd_rpc_py.connections.sync.IConnection import IConnection
 
 
@@ -97,6 +98,11 @@ class UnixSocketConnection(IConnection):
         # Create Connthrottle Instance
         self.Connthrottle: ConnThrottle = ConnThrottle(self)
         """Allow you to control the Connthrottle module.
+        (Require unrealIRCD 6.2.2 or higher)"""
+
+        # Create Security Group Instance
+        self.SecurityGroup: SecurityGroup = SecurityGroup(self)
+        """Allow you to control the security group module.
         (Require unrealIRCD 6.2.2 or higher)"""
 
         # Option 2 with Namespacescs

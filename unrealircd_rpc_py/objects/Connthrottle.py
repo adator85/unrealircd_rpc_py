@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.utils import utils
 
@@ -7,9 +7,6 @@ if TYPE_CHECKING:
 
 
 class ConnThrottle:
-
-    DB_SERVER: list[Dfn.ClientServer] = []
-    DB_MODULES: list[Dfn.ServerModule] = []
 
     def __init__(self, connection: 'IConnection') -> None:
 
@@ -53,17 +50,13 @@ class ConnThrottle:
             return Dfn.ConnThrottle(error=Dfn.RPCErrorModel(-1, err))
 
     def set(self, enabled: bool) -> Dfn.RPCResult:
-        """Retrieve all details of a single server.
+        """Activate or Deactivate the Connthrottle module
 
         Args:
-            serverorsid (str, optional): the server name (or the SID).
-                If not specified then the current server is assumed
-                (the one you connect to via the JSON-RPC API).
-                Defaults to None.
-
+            enabled (bool): True if your want to enable the module.
+                otherwise False.
         Returns:
-            ClientServer (ClientServer, None):
-                The ClientServer if success | None if error
+            RPCResult: The Standard response if success or error
         """
         try:
             response: dict[str, dict] = self.Connection.query(
@@ -87,10 +80,10 @@ class ConnThrottle:
                 error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def reset(self) -> Dfn.RPCResult:
-        """
+        """Reset the Connthrottle module
 
         Returns:
-            ServerRehash: True if success or False if failed
+            RPCResult: The standard RPC Result.
         """
         try:
             response: dict[str, dict] = self.Connection.query('connthrottle.reset')
