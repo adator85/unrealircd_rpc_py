@@ -13,7 +13,7 @@ from unrealircd_rpc_py.objects.Stats import Stats
 from unrealircd_rpc_py.objects.User import User
 from unrealircd_rpc_py.objects.Whowas import Whowas
 from unrealircd_rpc_py.objects.Message import Message
-
+from unrealircd_rpc_py.objects.Connthrottle import ConnThrottle
 
 class IConnection(ABC):
 
@@ -74,6 +74,11 @@ class IConnection(ABC):
         # Create Message Instance
         self.Message: Message = Message(self)
         """Allow you to send a messages to users.
+        (Require unrealIRCD 6.2.2 or higher)"""
+
+        # Create Connthrottle Instance
+        self.Connthrottle: ConnThrottle = ConnThrottle(self)
+        """Allow you to control the Connthrottle module.
         (Require unrealIRCD 6.2.2 or higher)"""
 
     @abstractmethod
