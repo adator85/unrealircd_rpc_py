@@ -9,7 +9,7 @@ setup(
         "websockets>=13.1",
         "sqlalchemy>=2.0.46",
         "pymysql>=1.1.2",
-        "psycopg2>=2.9.11"
+        "psycopg2-binary>=2.9.11"
     ],
     license='MIT',
     author='adator',

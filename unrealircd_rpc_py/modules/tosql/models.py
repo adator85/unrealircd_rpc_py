@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.inspection import inspect
@@ -69,6 +69,8 @@ class User(Base):
     account: str = Column(String(100))
     reputation: int = Column(Integer)
     security_groups: str = Column(String(255))
+    away_reason: str = Column(String(255))
+    away_since: datetime = Column(DateTime)
     modes: str = Column(String(100))
     snomasks: str = Column(String(100))
     operlogin: str = Column(String(100))
