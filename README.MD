@@ -82,6 +82,8 @@ This package allows easy interfacing with UnrealIRCd through regular Python3 cod
     Whowas = rpc.Whowas
     Log = rpc.Log # This feature requires unrealIRCd 6.1.8 or higher
     Message = rpc.Message # This feat requires unrealIRCd 6.2.2 or higher
+    Connthrottle = rpc.ConnThrottle # This feat requires unrealIRCd 6.2.2 or higher
+    SecurityGroup = rpc.SecurityGroup # This feat requires unrealIRCd 6.2.2 or higher
 
 ```
 

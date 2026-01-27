@@ -642,4 +642,5 @@ class SecurityGroup(MainModel):
     identified: bool = False
     reputation_score: int = 0
     builtin: bool = False
+    description: str = None
     error: RPCErrorModel = field(default_factory=RPCErrorModel)

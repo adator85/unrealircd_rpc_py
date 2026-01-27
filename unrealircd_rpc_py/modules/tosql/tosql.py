@@ -135,7 +135,7 @@ class ToSql:
 
             return rpc
         except Exception as err:
-            self.logs.error(f"Error On API: {err}")
+            self.logs.error(f"API Error On JSONRPC Server: {err}")
 
     def _sql_connect(self) -> Database:
         _sql = Database(
@@ -241,8 +241,12 @@ class ToSql:
             _user.channels = '; '.join([c.name for c in _user.channels])
             [_c.pop(keypop) for keypop in keys_pop]
 
+            _dict_user = _user.to_dict()
+            if not isinstance(_dict_user['away_since'], datetime):
+                _dict_user['away_since'] = datetime.strptime(_dict_user['away_since'], self._date_format) if _dict_user['away_since'] is not None else None
+
             dbmodels.append(Client(**_c))
-            db_user_models.append(User(id=rpc_client.id, **_user.to_dict()))
+            db_user_models.append(User(id=rpc_client.id, **_dict_user))
 
         dbmodels.extend(db_user_models)
 
