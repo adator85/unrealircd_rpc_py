@@ -21,24 +21,27 @@ class ConnThrottle:
             ConnThrottle: The ConnThrottle object
         """
         try:
-            response: dict[str, dict] = self.Connection.query('connthrottle.status')
+            response: dict[str, dict] = self.Connection.query(
+                'connthrottle.status'
+                )
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                return  Dfn.ConnThrottle(error=response_model.error)
+                return Dfn.ConnThrottle(error=response_model.error)
 
             _status: dict = response_model.result
             _counters = _status.pop('counters')
             _stats_last_minute = _status.pop('stats_last_minute')
             _config = _status.pop('config')
 
-            connthrottle = Dfn.ConnThrottle(**_status,
-                                               counters=Dfn.CTCounters(**_counters),
-                                               stats_last_minute=Dfn.CTStatsLastMinute(**_stats_last_minute),
-                                               config=Dfn.CTConfig(**_config)
-            )
+            connthrottle = Dfn.ConnThrottle(
+                **_status,
+                counters=Dfn.CTCounters(**_counters),
+                stats_last_minute=Dfn.CTStatsLastMinute(**_stats_last_minute),
+                config=Dfn.CTConfig(**_config)
+                )
 
             return connthrottle
 
@@ -86,7 +89,9 @@ class ConnThrottle:
             RPCResult: The standard RPC Result.
         """
         try:
-            response: dict[str, dict] = self.Connection.query('connthrottle.reset')
+            response: dict[str, dict] = self.Connection.query(
+                'connthrottle.reset'
+                )
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:

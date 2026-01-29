@@ -3,12 +3,14 @@ from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.inspection import inspect
 
+
 class ToDict:
     def to_dict(self):
         return {
             c.key: getattr(self, c.key)
             for c in inspect(self).mapper.column_attrs
         }
+
 
 Base = declarative_base(cls=ToDict)
 _prefix = 'unrealircd_'
@@ -25,11 +27,20 @@ class Channel(Base):
     topic_set_at: str = Column(String(255))
     modes: str = Column(String(32))
 
+
 class ChannelMembers(Base):
     __tablename__ = f'{_prefix}channel_members'
-    cm_id: str = Column(Integer, autoincrement=True, unique=True, primary_key=True)
-    channel_id: str = Column(String(32), ForeignKey(f'{_prefix}channels', name='fk_channel_id', ondelete='CASCADE'))
-    id: str = Column(String(9), ForeignKey(f'{_prefix}clients', name='fk_client_2_id'))
+    cm_id: str = Column(
+        Integer, autoincrement=True, unique=True, primary_key=True
+        )
+    channel_id: str = Column(
+        String(32), ForeignKey(
+            f'{_prefix}channels', name='fk_channel_id', ondelete='CASCADE'
+            )
+        )
+    id: str = Column(
+        String(9), ForeignKey(f'{_prefix}clients', name='fk_client_2_id')
+        )
     name: str = Column(String(32), nullable=False)
     hostname: str = Column(String(32))
     level: str = Column(String(32))
@@ -44,6 +55,7 @@ class ChannelMembers(Base):
     channel = relationship("Channel")
     client = relationship("Client")
 
+
 class Client(Base):
     __tablename__ = f'{_prefix}clients'
     id: str = Column(String(9), primary_key=True, unique=True)
@@ -57,10 +69,17 @@ class Client(Base):
     idle_since: str = Column(DateTime)
     country_code: str = Column(String(2))
 
+
 class User(Base):
     __tablename__ = f'{_prefix}users'
-    sys_id: str = Column(Integer, autoincrement=True, unique=True, primary_key=True)
-    id: str = Column(String(9), ForeignKey(f'{_prefix}clients', name='fk_client_id', ondelete='CASCADE'))
+    sys_id: str = Column(
+        Integer, autoincrement=True, unique=True, primary_key=True
+        )
+    id: str = Column(
+        String(9), ForeignKey(
+            f'{_prefix}clients', name='fk_client_id', ondelete='CASCADE'
+            )
+        )
     username: str = Column(String(32), nullable=False)
     realname: str = Column(String(32), nullable=False)
     vhost: str = Column(String(100))
@@ -80,9 +99,12 @@ class User(Base):
     # Establish relationship from the Nickname side to the Account
     client = relationship("Client")
 
+
 class NameBan(Base):
     __tablename__ = f'{_prefix}namebans'
-    sys_id: str = Column(Integer, autoincrement=True, unique=True, primary_key=True)
+    sys_id: str = Column(
+        Integer, autoincrement=True, unique=True, primary_key=True
+        )
     type: str = Column(String(100))
     type_string: str = Column(String(100))
     set_by: str = Column(String(100))
@@ -96,10 +118,18 @@ class NameBan(Base):
     name: str = Column(String(100))
     reason: str = Column(String(100))
 
+
 class Server(Base):
     __tablename__ = f'{_prefix}servers'
-    sys_id: str = Column(Integer, autoincrement=True, unique=True, primary_key=True)
-    id: str = Column(String(9), ForeignKey(f'{_prefix}clientservers', name='fk_clientserver_id', ondelete='CASCADE'))
+    sys_id: str = Column(
+        Integer, autoincrement=True, unique=True, primary_key=True
+        )
+    id: str = Column(
+        String(9),
+        ForeignKey(f'{_prefix}clientservers',
+                   name='fk_clientserver_id',
+                   ondelete='CASCADE')
+        )
     info: str = Column(String(255))
     uplink: str = Column(String(100))
     num_users: int = Column(Integer)
@@ -109,6 +139,7 @@ class Server(Base):
 
     # Establish relationship from the Nickname side to the Account
     clientserver = relationship("ClientServer")
+
 
 class ClientServer(Base):
     __tablename__ = f'{_prefix}clientservers'
