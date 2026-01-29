@@ -16,6 +16,7 @@ from unrealircd_rpc_py.objects.Message import Message
 from unrealircd_rpc_py.objects.Connthrottle import ConnThrottle
 from unrealircd_rpc_py.objects.Security_group import SecurityGroup
 
+
 class IConnection(ABC):
 
     @abstractmethod

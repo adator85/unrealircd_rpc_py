@@ -223,11 +223,15 @@ def is_version_ircd_ok(
     else:
         return True
 
+
 def generate_ids(nbytes: int = 16) -> str:
     """Generates a random hexadecimal token for IDs.
         Args:
-            nbytes (int, optional): The number of bytes to use when generating the token. Defaults to 16.
+            nbytes (int, optional): The number of bytes to use when
+                                    generating the token. Defaults to 16.
         Returns:
-            Union[str, None]: A string containing the hexadecimal representation of the token, or None if an error occurred.
+            Union[str, None]: A string containing the hexadecimal
+                              representation of the token, or None
+                              if an error occurred.
     """
     return token_hex(nbytes)

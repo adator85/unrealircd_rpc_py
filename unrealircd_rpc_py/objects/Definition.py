@@ -587,16 +587,19 @@ class Whowas(MainModel):
 # ConnThrottle Class #
 ######################
 
+
 @dataclass
 class CTCounters(MainModel):
     local_count: int = 0
     global_count: int = 0
+
 
 @dataclass
 class CTStatsLastMinute(MainModel):
     rejected_clients: int = 0
     allowed_except: int = 0
     allowed_unknown_users: int = 0
+
 
 @dataclass
 class CTConfig(MainModel):
@@ -608,6 +611,7 @@ class CTConfig(MainModel):
     except_reputation_score: int = 0
     except_sasl_bypass: bool = False
     except_webirc_bypass: bool = False
+
 
 @dataclass
 class ConnThrottle(MainModel):
@@ -627,13 +631,16 @@ class ConnThrottle(MainModel):
     start_delay_remaining: int = 0
     reputation_gathering: bool = False
     counters: CTCounters = field(default_factory=CTCounters)
-    stats_last_minute: CTStatsLastMinute  = field(default_factory=CTStatsLastMinute)
+    stats_last_minute: CTStatsLastMinute = field(
+        default_factory=CTStatsLastMinute
+        )
     config: CTConfig = field(default_factory=CTConfig)
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
 #######################
 # SecurityGroup Class #
 #######################
+
 
 @dataclass
 class SecurityGroup(MainModel):

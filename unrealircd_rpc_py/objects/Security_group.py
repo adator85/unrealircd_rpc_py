@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING 
+from typing import TYPE_CHECKING
 import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.utils import utils
 
@@ -23,13 +23,17 @@ class SecurityGroup:
             list[SecurityGroup]: List of SecurityGroup objects
         """
         try:
-            response: dict[str, dict] = self.Connection.query('security_group.list')
+            response: dict[str, dict] = self.Connection.query(
+                'security_group.list'
+                )
             response_model = utils.construct_rpc_response(response)
 
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_SECURITY_GROUPS.append(Dfn.SecurityGroup(error=response_model.error))
+                self.DB_SECURITY_GROUPS.append(
+                    Dfn.SecurityGroup(error=response_model.error)
+                    )
                 return self.DB_SECURITY_GROUPS
 
             _sgs = response_model.result.get('list', [])
@@ -69,4 +73,6 @@ class SecurityGroup:
 
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return Dfn.SecurityGroup(error=Dfn.RPCErrorModel(-1, err.__str__()))
+            return Dfn.SecurityGroup(
+                error=Dfn.RPCErrorModel(-1, err.__str__())
+                )
