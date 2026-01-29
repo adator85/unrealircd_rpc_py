@@ -2,6 +2,7 @@ from datetime import datetime
 import logging
 import os
 from re import match
+from secrets import token_hex
 from types import SimpleNamespace
 from typing import Any, Optional, Union
 import unrealircd_rpc_py.objects.Definition as Dfn
@@ -189,7 +190,8 @@ def start_log_system(name: str, debug_level: int = 20) -> logging.Logger:
     # Define log format
     formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s '
-        '(%(filename)s::%(funcName)s::%(lineno)d)'
+        '(%(filename)s::%(funcName)s::%(lineno)d)',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
 
     # Apply log format
@@ -220,3 +222,12 @@ def is_version_ircd_ok(
             return False
     else:
         return True
+
+def generate_ids(nbytes: int = 16) -> str:
+    """Generates a random hexadecimal token for IDs.
+        Args:
+            nbytes (int, optional): The number of bytes to use when generating the token. Defaults to 16.
+        Returns:
+            Union[str, None]: A string containing the hexadecimal representation of the token, or None if an error occurred.
+    """
+    return token_hex(nbytes)

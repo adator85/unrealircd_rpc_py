@@ -122,8 +122,10 @@ class User(MainModel):
     cloakedhost: str = None
     servername: str = None
     account: str = None
-    reputation: int = None
+    reputation: int = 0
     security_groups: list[str] = field(default_factory=list)
+    away_reason: str = None
+    away_since: str = None
     modes: str = None
     snomasks: str = None
     operlogin: str = None
@@ -579,4 +581,66 @@ class Whowas(MainModel):
     connected_since: str = None
     user: WhowasUser = field(default_factory=WhowasUser)
     geoip: Geoip = field(default_factory=Geoip)
+    error: RPCErrorModel = field(default_factory=RPCErrorModel)
+
+######################
+# ConnThrottle Class #
+######################
+
+@dataclass
+class CTCounters(MainModel):
+    local_count: int = 0
+    global_count: int = 0
+
+@dataclass
+class CTStatsLastMinute(MainModel):
+    rejected_clients: int = 0
+    allowed_except: int = 0
+    allowed_unknown_users: int = 0
+
+@dataclass
+class CTConfig(MainModel):
+    local_throttle_count: int = 0
+    local_throttle_period: int = 0
+    global_throttle_count: int = 0
+    global_throttle_period: int = 0
+    start_delay: int = 0
+    except_reputation_score: int = 0
+    except_sasl_bypass: bool = False
+    except_webirc_bypass: bool = False
+
+@dataclass
+class ConnThrottle(MainModel):
+    """Connection Throttle Class
+
+    Depends on:
+    ```
+    1- CTCounters
+    2- CTStatsLastMinute
+    3- CTConfig
+    ```
+    """
+    enabled: bool = False
+    throttling_this_minute: bool = False
+    throttling_previous_minute: bool = False
+    state: str = None
+    start_delay_remaining: int = 0
+    reputation_gathering: bool = False
+    counters: CTCounters = field(default_factory=CTCounters)
+    stats_last_minute: CTStatsLastMinute  = field(default_factory=CTStatsLastMinute)
+    config: CTConfig = field(default_factory=CTConfig)
+    error: RPCErrorModel = field(default_factory=RPCErrorModel)
+
+#######################
+# SecurityGroup Class #
+#######################
+
+@dataclass
+class SecurityGroup(MainModel):
+    name: str = None
+    priority: int = 0
+    identified: bool = False
+    reputation_score: int = 0
+    builtin: bool = False
+    description: str = None
     error: RPCErrorModel = field(default_factory=RPCErrorModel)

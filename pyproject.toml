@@ -1,10 +1,44 @@
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.pytest.ini_options]
-minversion = "6.0"
-addopts = "-rxsXkw -vv -s"
-testpaths = [
-    "tests"
+[project]
+name = "unrealircd-rpc-py"
+version = "3.1.4"
+description = "Python library for UnrealIRCd json-rpc"
+authors = [
+    {name = "adator", email = "adator@octobyte.ovh" }
 ]
+keywords = [ "Unrealircd", "irc", "jsonrpc", "json-rpc", "ircd" ]
+license = "MIT"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.10"
+dependencies = [
+    "requests (>=2.32.5,<3.0.0)",
+    "websockets (>=13.1,<=16.0.0)",
+    "sqlalchemy (>=2.0.46,<3.0.0)",
+    "pymysql (>=1.1.2,<2.0.0)",
+    "psycopg2-binary (>=2.9.11,<3.0.0)"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent"
+]
+urls = { homepage = "https://octobyte.ovh/", repository = "https://github.com/adator85/unrealircd_rpc_py" }
+
+[dependency-groups]
+dev = [
+    "flake8 (>=7.3.0,<8.0.0)",
+    "poetry (>=2.3.1,<3.0.0)",
+    "pytest (>=8.3.3,<9.0.0)",
+    "sphinx (>=7.4.7,<8.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+
+[tool.poetry]
+include = ["how_to_use*.py"]
+exclude = ["tests/*", "docs/*", "dist/*"]
+readme = "README.MD"
