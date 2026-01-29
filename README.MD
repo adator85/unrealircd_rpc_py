@@ -3,7 +3,7 @@
 ![Static Badge](https://img.shields.io/badge/Python3-3.10%20or%20later-green)
 ![Static Badge](https://img.shields.io/badge/Requests->=2.25.1-green)
 ![Static Badge](https://img.shields.io/badge/Websockets->=13.1-green)
-![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fadator85%2Funrealircd_rpc_py%2Fmain%2Fversion.json&query=version&label=Current%20Version)
+![Dynamic TOML Badge](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fadator85%2Funrealircd_rpc_py%2Frefs%2Fheads%2Fmain%2Fpyproject.toml&query=%24.project.version&prefix=v&label=Current%20version)
 ![Static Badge](https://img.shields.io/badge/Maintained-Yes-green)
 
 
