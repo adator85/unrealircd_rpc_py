@@ -93,16 +93,16 @@ class Database:
                 # mysql+pymysql://<username>:<password>@<host>:<port>/<database>
                 _db_port = 3306 if self._db_port == 0 else self._db_port
                 _chaine = (f'{self._db_username}:'
-                f'{self._db_password}@{self._db_hostname}:'
-                f'{_db_port}/{self._db_name}')
+                           f'{self._db_password}@{self._db_hostname}:'
+                           f'{_db_port}/{self._db_name}')
                 return f'mysql+pymysql://{_chaine}'
 
             case 'postgresql':
                 # postgresql://<username>:<password>@<host>:<port>/<database>
                 _db_port = 5432 if self._db_port == 0 else self._db_port
                 _chaine = (f'{self._db_username}:'
-                f'{self._db_password}@{self._db_hostname}:'
-                f'{_db_port}/{self._db_name}')
+                           f'{self._db_password}@{self._db_hostname}:'
+                           f'{_db_port}/{self._db_name}')
                 return f'postgresql://{_chaine}'
 
             case _:
