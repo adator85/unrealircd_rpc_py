@@ -1,5 +1,0 @@
-websockets
-requests
-sqlalchemy
-pymysql
-psycopg2-binary

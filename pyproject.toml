@@ -1,6 +1,6 @@
 [project]
 name = "unrealircd-rpc-py"
-version = "3.1.5"
+version = "3.1.6"
 description = "Python library for UnrealIRCd json-rpc"
 authors = [
     {name = "adator", email = "adator@octobyte.ovh" }
@@ -41,4 +41,4 @@ python = ">=3.10,<4.0"
 [tool.poetry]
 include = ["how_to_use*.py"]
 exclude = ["tests/*", "docs/*", "dist/*"]
-readme = "README.MD"
+readme = "README.md"
