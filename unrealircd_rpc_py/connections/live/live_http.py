@@ -135,7 +135,7 @@ class LiveWebsocket(ILiveConnection):
             'log.subscribe',
             param={"sources": sources}
         )
-        print(f"First Subscribe response: {response}")
+        # print(f"First Subscribe response: {response}")
         if response.method is None:
             response.method = 'log.subscribe'
 
