@@ -35,6 +35,8 @@ class ConnThrottle:
             _counters = _status.pop('counters')
             _stats_last_minute = _status.pop('stats_last_minute')
             _config = _status.pop('config')
+            if 'except' in _config:
+                _config['exceptions'] = _config.pop('except')
 
             connthrottle = Dfn.ConnThrottle(
                 **_status,
