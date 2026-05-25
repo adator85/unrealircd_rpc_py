@@ -608,6 +608,7 @@ class CTConfig(MainModel):
     global_throttle_count: int = 0
     global_throttle_period: int = 0
     start_delay: int = 0
+    exceptions: dict = field(default_factory=dict()) # Working With 6.2.5
     except_reputation_score: int = 0
     except_sasl_bypass: bool = False
     except_webirc_bypass: bool = False
