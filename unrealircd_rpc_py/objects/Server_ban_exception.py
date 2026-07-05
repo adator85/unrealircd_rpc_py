@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
-import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.utils import utils
+import unrealircd_rpc_py.objects.Definition as Dfn
+
 
 if TYPE_CHECKING:
     from unrealircd_rpc_py.connections.sync.IConnection import IConnection
@@ -167,7 +168,6 @@ class ServerBanException:
                 method='server_ban_exception.del',
                 param={"name": name, "set_by": set_by})
             response_model = utils.construct_rpc_response(response)
-            print(response_model)
 
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "

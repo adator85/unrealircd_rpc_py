@@ -35,7 +35,7 @@ class Rpc:
                 self.DB_RPC_INFO.append(
                     Dfn.RpcInfo(error=response_model.error)
                 )
-                return self.DB_RPC_INFO
+                return [Dfn.RpcInfo(error=response_model.error)]
 
             rpcinfos: dict[dict, dict] = response_model.result.get(
                 'methods', {}
@@ -50,10 +50,10 @@ class Rpc:
 
         except KeyError as ke:
             self.Logs.error(ke)
-            return []
+            return Dfn.RpcInfo(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(err)
-            return []
+            return Dfn.RpcInfo(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def set_issuer(self, name: str) -> Dfn.RPCResult:
         """Set who is the issuer of all the subsequent commands that are done.

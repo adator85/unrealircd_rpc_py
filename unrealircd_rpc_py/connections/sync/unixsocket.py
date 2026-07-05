@@ -16,7 +16,7 @@ from unrealircd_rpc_py.objects.Channel import Channel
 from unrealircd_rpc_py.objects.Name_ban import NameBan
 from unrealircd_rpc_py.objects.Server import Server
 from unrealircd_rpc_py.objects.Server_ban import ServerBan
-from unrealircd_rpc_py.objects.Server_ban_exeption import ServerBanException
+from unrealircd_rpc_py.objects.Server_ban_exception import ServerBanException
 from unrealircd_rpc_py.objects.User import User
 from unrealircd_rpc_py.objects.Log import Log
 from unrealircd_rpc_py.objects.Rpc import Rpc
@@ -253,6 +253,10 @@ class UnixSocketConnection(IConnection):
         if not self.is_setup:
             self.Logs.critical(
                 'You must call "setup" method before anything.'
+            )
+            return Dfn.RPCError(
+                error=Dfn.RPCErrorModel(
+                    -1, 'You must call "setup" method before anything.')
             )
             raise RpcSetupError(
                 'You must call "setup" method before anything.'

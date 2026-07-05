@@ -47,10 +47,7 @@ class Channel:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_CHANNELS.append(
-                    Dfn.Channel(error=response_model.error)
-                )
-                return self.DB_CHANNELS
+                return [Dfn.Channel(error=response_model.error)]
 
             channels: list[dict] = response_model.result.get('list', [])
 
@@ -88,10 +85,10 @@ class Channel:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.Channel(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.Channel(error=Dfn.RPCErrorModel(-1, err.__str__()))]
 
     def get(self, channel: str, object_detail_level: int = 3) -> Dfn.Channel:
         """Retrieve all details of a single channel.

@@ -31,10 +31,7 @@ class NameBan:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_NAME_BANS.append(
-                    Dfn.NameBan(error=response_model.error)
-                )
-                return self.DB_NAME_BANS
+                return [Dfn.NameBan(error=response_model.error)]
 
             namebans: list[dict] = response.get('result', {}).get('list', [])
 
@@ -47,10 +44,10 @@ class NameBan:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.NameBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.NameBan(error=Dfn.RPCErrorModel(-1, err.__str__()))]
 
     def get(self, name: str) -> Dfn.NameBan:
         """Retrieve all details of a single name ban (qline).

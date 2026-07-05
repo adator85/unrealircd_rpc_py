@@ -32,10 +32,7 @@ class Server:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_SERVER.append(
-                    Dfn.ClientServer(error=response_model.error)
-                )
-                return self.DB_SERVER
+                return [Dfn.ClientServer(error=response_model.error)]
 
             servers: list[dict] = response_model.result.get('list', [])
 
@@ -83,10 +80,14 @@ class Server:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.ClientServer(
+                error=Dfn.RPCErrorModel(-1, ke.__str__())
+                )]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.ClientServer(
+                error=Dfn.RPCErrorModel(-1, err.__str__())
+                )]
 
     def get(self, serverorsid: str = None) -> Dfn.ClientServer:
         """Retrieve all details of a single server.
@@ -186,7 +187,7 @@ class Server:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                return Dfn.ClientServer(error=response_model.error)
+                return Dfn.ServerRehash(error=response_model.error)
 
             rehash: dict = response_model.result
 
@@ -321,10 +322,7 @@ class Server:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_MODULES.append(
-                    Dfn.ServerModule(error=response_model.error)
-                )
-                return self.DB_MODULES
+                return [Dfn.ServerModule(error=response_model.error)]
 
             modules: list = response_model.result.get('list', [])
 
@@ -335,7 +333,11 @@ class Server:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.ServerModule(
+                error=Dfn.RPCErrorModel(-1, ke.__str__())
+                )]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.ServerModule(
+                error=Dfn.RPCErrorModel(-1, err.__str__())
+                )]

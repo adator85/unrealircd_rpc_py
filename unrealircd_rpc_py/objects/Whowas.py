@@ -49,7 +49,7 @@ class Whowas:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} - "
                                 f"Msg: {response_model.error.message}")
-                return response_model
+                return [Dfn.Whowas(error=response_model.error)]
 
             whowass: list[dict] = (response_model.result
                                    .get('result', {})
@@ -85,7 +85,7 @@ class Whowas:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
+            return [Dfn.Whowas(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
+            return [Dfn.Whowas(error=Dfn.RPCErrorModel(-1, err.__str__()))]

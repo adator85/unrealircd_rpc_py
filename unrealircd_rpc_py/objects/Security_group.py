@@ -31,24 +31,30 @@ class SecurityGroup:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_SECURITY_GROUPS.append(
-                    Dfn.SecurityGroup(error=response_model.error)
-                    )
-                return self.DB_SECURITY_GROUPS
+                return [Dfn.SecurityGroup(error=response_model.error)]
 
             _sgs = response_model.result.get('list', [])
+
             for _sg in _sgs:
-                self.DB_SECURITY_GROUPS.append(Dfn.SecurityGroup(**_sg))
+                verified = utils.align_schema(Dfn.SecurityGroup(), _sg)
+                if verified:
+                    self.DB_SECURITY_GROUPS.append(Dfn.SecurityGroup(**verified))
 
             return self.DB_SECURITY_GROUPS
 
         except KeyError as ke:
             self.Logs.error(f'Key error: {ke}')
-            return self.DB_SECURITY_GROUPS
+            _obj = Dfn.SecurityGroup(
+                error=Dfn.RPCErrorModel(-1, ke.__str__())
+                )
+            return [_obj]
 
         except Exception as err:
             self.Logs.error(f'General error: {err}', exc_info=True)
-            return self.DB_SECURITY_GROUPS
+            _obj = Dfn.SecurityGroup(
+                error=Dfn.RPCErrorModel(-1, err.__str__())
+                )
+            return [_obj]
 
     def get(self, name: str) -> Dfn.SecurityGroup:
         """Retrieve a security group by name

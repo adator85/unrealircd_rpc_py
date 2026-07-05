@@ -235,3 +235,31 @@ def generate_ids(nbytes: int = 16) -> str:
                               if an error occurred.
     """
     return token_hex(nbytes)
+
+
+def align_schema(trusted_object: Any, api_response: dict) -> Optional[dict]:
+    """Align schema.
+
+    Args:
+        trusted_object (Any): Must be a defined object
+        api_response (dict): The API response
+
+    Returns:
+        dict: The new dictionary without not mapped keys |
+              None if the object is not a defined object
+    """
+
+    if not getattr(trusted_object, 'get_attributes', None):
+        return None
+
+    o = api_response.copy()
+    key_known = trusted_object.get_attributes()
+    key_to_drop = []
+    for k, v in o.items():
+        if k not in key_known:
+            key_to_drop.append(k)
+
+    for k in key_to_drop:
+        o.pop(k)
+    
+    return o

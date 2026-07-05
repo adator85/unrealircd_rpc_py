@@ -31,24 +31,23 @@ class ServerBan:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_SERVERS_BANS.append(
-                    Dfn.ServerBan(error=response_model.error)
-                )
-                return self.DB_SERVERS_BANS
+                return [Dfn.ServerBan(error=response_model.error)]
 
             srvbans: list[dict] = response_model.result.get('list', [])
 
             for srvban in srvbans:
-                self.DB_SERVERS_BANS.append(Dfn.ServerBan(**srvban))
+                verified = utils.align_schema(Dfn.ServerBan(), srvban)
+                if verified:
+                    self.DB_SERVERS_BANS.append(Dfn.ServerBan(**verified))
 
             return self.DB_SERVERS_BANS
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))]
 
     def get(self, query_type: str, name: str) -> Dfn.ServerBan:
         """Retrieve all details of a single server ban (LINE).
@@ -126,16 +125,16 @@ class ServerBan:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                return Dfn.ServerBan(error=response_model.error)
+                return response_model
 
             return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))
 
     def del_(self, query_type: str, name: str, set_by: str = None
              ) -> Dfn.RPCResult:
@@ -167,13 +166,13 @@ class ServerBan:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                return Dfn.ServerBan(error=response_model.error)
+                return response_model
 
             return response_model
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, ke.__str__()))
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, ke.__str__()))
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return Dfn.ServerBan(error=Dfn.RPCErrorModel(-1, err.__str__()))
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, err.__str__()))

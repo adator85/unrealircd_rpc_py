@@ -177,6 +177,17 @@ class ToSql:
         return _sql
 
     def run(self) -> bool:
+
+        _url = self.rpc_credentials.url
+        _username = self.rpc_credentials.username
+        if _url == '' or _username == '':
+            (self
+             .logs
+             .error("""You must provide the url and the username
+                    rpc_credentails.url = 'https://your.rpc.link:PORT/api'
+                    rpc_credentails.username = 'YOUR-RPC-USER'"""))
+            return False
+
         self._rpc = self._rpc_connect()
         self._sql = self._sql_connect()
 

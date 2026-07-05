@@ -7,7 +7,7 @@ from unrealircd_rpc_py.objects.Name_ban import NameBan
 from unrealircd_rpc_py.objects.Rpc import Rpc
 from unrealircd_rpc_py.objects.Server import Server
 from unrealircd_rpc_py.objects.Server_ban import ServerBan
-from unrealircd_rpc_py.objects.Server_ban_exeption import ServerBanException
+from unrealircd_rpc_py.objects.Server_ban_exception import ServerBanException
 from unrealircd_rpc_py.objects.Spamfilter import Spamfilter
 from unrealircd_rpc_py.objects.Stats import Stats
 from unrealircd_rpc_py.objects.User import User

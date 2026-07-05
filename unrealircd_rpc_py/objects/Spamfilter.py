@@ -33,10 +33,7 @@ class Spamfilter:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_SPAMFILTERS.append(
-                    Dfn.Spamfilter(error=response_model.error)
-                )
-                return self.DB_SPAMFILTERS
+                return [Dfn.Spamfilter(error=response_model.error)]
 
             spamfilters = response_model.result.get('list', [])
 
@@ -47,10 +44,10 @@ class Spamfilter:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.Spamfilter(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.Spamfilter(error=Dfn.RPCErrorModel(-1, err.__str__()))]
 
     def get(self, name: str, match_type: str, ban_action: str,
             spamfilter_targets: str) -> Dfn.Spamfilter:

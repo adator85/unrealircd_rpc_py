@@ -40,10 +40,7 @@ class User:
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
-                self.DB_USER.append(
-                    Dfn.Client(error=response_model.error)
-                )
-                return self.DB_USER
+                return [Dfn.Client(error=response_model.error)]
 
             users: list[dict] = response_model.result.get('list', [])
 
