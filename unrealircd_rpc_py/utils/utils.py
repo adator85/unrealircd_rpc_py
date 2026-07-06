@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import os
+from pathlib import Path
 from re import match
 from secrets import token_hex
 from types import SimpleNamespace
@@ -24,7 +25,8 @@ def check_unix_socket_file(path_to_socket_file: str) -> bool:
     if path_to_socket_file is None:
         return False
 
-    if not os.path.exists(path_to_socket_file):
+    _path = Path(path_to_socket_file)
+    if not _path.exists():
         return False
 
     return True

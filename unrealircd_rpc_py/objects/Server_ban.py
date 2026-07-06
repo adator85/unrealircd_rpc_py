@@ -74,10 +74,14 @@ class ServerBan:
                 return Dfn.ServerBan(error=response_model.error)
 
             srvban: dict = response_model.result.get('tkl', {})
+            
+            verified_schema = utils.align_schema(Dfn.ServerBan(), srvban)
+            if verified_schema:
+                return Dfn.ServerBan(**verified_schema)
 
-            obj = Dfn.ServerBan(**srvban)
-
-            return obj
+            return Dfn.ServerBan(
+                error=Dfn.RPCErrorModel(-2, 'Empty Response')
+            )
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')

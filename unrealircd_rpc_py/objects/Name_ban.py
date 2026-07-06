@@ -36,9 +36,11 @@ class NameBan:
             namebans: list[dict] = response.get('result', {}).get('list', [])
 
             for nameban in namebans:
-                self.DB_NAME_BANS.append(
-                        Dfn.NameBan(**nameban)
-                )
+                verified = utils.align_schema(Dfn.NameBan(), nameban)
+                if verified:
+                    self.DB_NAME_BANS.append(
+                            Dfn.NameBan(**verified)
+                    )
 
             return self.DB_NAME_BANS
 
@@ -72,9 +74,11 @@ class NameBan:
 
             nameban = response_model.result.get('tkl', {})
 
-            obj = Dfn.NameBan(**nameban)
+            verified = utils.align_schema(Dfn.NameBan(), nameban)
+            if verified:
+                return Dfn.NameBan(**verified)
 
-            return obj
+            return Dfn.NameBan(error=Dfn.RPCErrorModel(-1, 'Empty result!'))
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')

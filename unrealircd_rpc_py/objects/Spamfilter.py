@@ -38,7 +38,9 @@ class Spamfilter:
             spamfilters = response_model.result.get('list', [])
 
             for spamfilter in spamfilters:
-                self.DB_SPAMFILTERS.append(Dfn.Spamfilter(**spamfilter))
+                verified = utils.align_schema(Dfn.Spamfilter(), spamfilter)
+                if verified:
+                    self.DB_SPAMFILTERS.append(Dfn.Spamfilter(**verified))
 
             return self.DB_SPAMFILTERS
 
@@ -85,10 +87,11 @@ class Spamfilter:
                 return Dfn.Spamfilter(error=response_model.error)
 
             spamfilter = response_model.result.get('tkl', {})
+            verified = utils.align_schema(Dfn.Spamfilter(), spamfilter)
+            if verified:
+                return Dfn.Spamfilter(**verified)
 
-            object_spamfilter = Dfn.Spamfilter(**spamfilter)
-
-            return object_spamfilter
+            return Dfn.Spamfilter(error=Dfn.RPCErrorModel(-1, 'Empty result!'))
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')

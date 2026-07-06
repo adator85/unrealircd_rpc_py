@@ -254,12 +254,9 @@ class UnixSocketConnection(IConnection):
             self.Logs.critical(
                 'You must call "setup" method before anything.'
             )
-            return Dfn.RPCError(
+            return Dfn.RPCResult(
                 error=Dfn.RPCErrorModel(
                     -1, 'You must call "setup" method before anything.')
-            )
-            raise RpcSetupError(
-                'You must call "setup" method before anything.'
             )
 
         if not utils.check_unix_socket_file(self.path_to_socket_file):
@@ -267,7 +264,7 @@ class UnixSocketConnection(IConnection):
                          'please be sure that you are providing the correct '
                          'socket path')
             self.Logs.error(error_msg)
-            return RpcUnixSocketFileNotFoundError(error_msg)
+            return Dfn.RPCResult(error=Dfn.RPCErrorModel(-1, error_msg))
 
         return Dfn.RPCResult(result=True)
 

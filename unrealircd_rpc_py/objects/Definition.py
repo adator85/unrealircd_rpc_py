@@ -35,6 +35,10 @@ class MainModel:
         """Return a list of attributes name"""
         return [f.name for f in fields(self)]
 
+    def get_obj_name(self) -> str:
+        """Return the name of the object"""
+        return self.__class__.__name__
+
 
 @dataclass
 class RPCErrorModel(MainModel):
@@ -448,6 +452,7 @@ class ServerBanException(MainModel):
 @dataclass
 class Spamfilter(MainModel):
     """Spamfilters class"""
+    id: str = None
     type: str = None
     type_string: str = None
     set_by: str = None
