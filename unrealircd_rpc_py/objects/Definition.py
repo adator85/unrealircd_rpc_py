@@ -160,6 +160,7 @@ class Client(MainModel):
     idle_since: str = None
     tls: Tls = field(default_factory=Tls)
     user: User = field(default_factory=User)
+    flood: dict = field(default_factory=dict)
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
 
@@ -397,6 +398,7 @@ class Channel(MainModel):
 @dataclass
 class NameBan(MainModel):
     """Name Ban class"""
+    id: str = None
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -409,12 +411,23 @@ class NameBan(MainModel):
     set_in_config: bool = False
     name: str = None
     reason: str = None
+    spamfilter_id: str = None
+    exception_types: str = None
+    match_type: str = None
+    ban_action: str = None
+    spamfilter_targets: str = None
+    hits: int = 0
+    last_hit_at: str = None
+    hits_except: int = 0
+    last_hit_except_at: str = None
+    match: dict = field(default_factory=dict)
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
 
 @dataclass
 class ServerBan(MainModel):
     """Server Ban class"""
+    id: str = None
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -427,12 +440,17 @@ class ServerBan(MainModel):
     set_in_config: bool = False
     name: str = None
     reason: str = None
+    match: str = None
+    spamfilter_id: str = None
+    hits: int = 0
+    last_hit_at: str = None
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
 
 @dataclass
 class ServerBanException(MainModel):
     """Server Ban Exception class"""
+    id: str = None
     type: str = None
     type_string: str = None
     set_by: str = None
@@ -445,6 +463,10 @@ class ServerBanException(MainModel):
     set_in_config: bool = False
     name: str = None
     reason: str = None
+    match: dict = field(default_factory=dict)
+    spamfilter_id: str = None
+    hits: int = 0
+    last_hit_at: str = None
     exception_types: str = None
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
@@ -470,8 +492,13 @@ class Spamfilter(MainModel):
     ban_duration_string: str = None
     spamfilter_targets: str = None
     reason: str = None
+    spamfilter_id: str = None
+    exception_types: str = None
+    match: dict = field(default_factory=dict)
     hits: int = 0
+    last_hit_at: str = None
     hits_except: int = 0
+    last_hit_except_at: str = None
     error: RPCErrorModel = field(default_factory=RPCErrorModel)
 
 
@@ -613,7 +640,7 @@ class CTConfig(MainModel):
     global_throttle_count: int = 0
     global_throttle_period: int = 0
     start_delay: int = 0
-    exceptions: dict = field(default_factory=dict())  # Working With 6.2.5
+    exceptions: dict = field(default_factory=dict)  # Working With 6.2.5
     except_reputation_score: int = 0
     except_sasl_bypass: bool = False
     except_webirc_bypass: bool = False

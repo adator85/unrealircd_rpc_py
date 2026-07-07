@@ -1,3 +1,4 @@
+from pprint import pprint
 from typing import TYPE_CHECKING
 import unrealircd_rpc_py.objects.Definition as Dfn
 from unrealircd_rpc_py.utils import utils
@@ -34,6 +35,7 @@ class SecurityGroup:
                 return [Dfn.SecurityGroup(error=response_model.error)]
 
             _sgs = response_model.result.get('list', [])
+            pprint(response, indent=2)
 
             for _sg in _sgs:
                 verified = utils.align_schema(Dfn.SecurityGroup(), _sg)
@@ -68,14 +70,18 @@ class SecurityGroup:
             response: dict[str, dict] = self.Connection.query(
                 'security_group.get', {'name': name})
             response_model = utils.construct_rpc_response(response)
+            print(response_model)
 
             if response_model.error.code != 0:
                 self.Logs.error(f"Code: {response_model.error.code} "
                                 f"- Msg: {response_model.error.message}")
                 return Dfn.SecurityGroup(error=response_model.error)
 
-            _sg = Dfn.SecurityGroup(**response_model.result)
-            return _sg
+            validated = utils.align_schema(Dfn.SecurityGroup(), response_model.result)
+            if validated:
+                return Dfn.SecurityGroup(**response_model.result)
+
+            return Dfn.SecurityGroup(error=Dfn.RPCErrorModel(-1, "Empty response!"))
 
         except Exception as err:
             self.Logs.error(f'General error: {err}')

@@ -81,10 +81,10 @@ class User:
 
         except KeyError as ke:
             self.Logs.error(f'KeyError: {ke}')
-            return []
+            return [Dfn.Client(error=Dfn.RPCErrorModel(-1, ke.__str__()))]
         except Exception as err:
             self.Logs.error(f'General error: {err}')
-            return []
+            return [Dfn.Client(error=Dfn.RPCErrorModel(-1, err.__str__()))]
 
     def get(self, nickoruid: str) -> Dfn.Client:
         """Get user information
